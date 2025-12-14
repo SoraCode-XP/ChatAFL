@@ -164,10 +164,12 @@ char *chat_with_zhipu(char *prompt, char *model, int tries, float temperature)
     char *accept_header = "Accept: application/json";
     char *data = NULL;
     
-    // 使用智谱API的模型，默认为glm-4
+    // Use Zhipu model, default is glm-4
     const char *zhipu_model = "glm-4";
-    if (model && strcmp(model, "glm-3-turbo") == 0) {
+    if (model && (strcmp(model, "glm-3-turbo") == 0 || strcmp(model, "zhipu-glm-3-turbo") == 0)) {
         zhipu_model = "glm-3-turbo";
+    } else if (model && (strcmp(model, "glm-4") == 0 || strcmp(model, "zhipu-glm-4") == 0 || strcmp(model, "zhipu") == 0)) {
+        zhipu_model = "glm-4";
     }
     
     asprintf(&data, "{\"model\": \"%s\",\"messages\": %s, \"max_tokens\": %d, \"temperature\": %f}", zhipu_model, prompt, MAX_TOKENS, temperature);
@@ -200,7 +202,7 @@ char *chat_with_zhipu(char *prompt, char *model, int tries, float temperature)
             {
                 json_object *jobj = json_tokener_parse(chunk.memory);
 
-                // 检查智谱API的响应格式
+                // Check if the "choices" key exists (same as OpenAI)
                 if (json_object_object_get_ex(jobj, "choices", NULL))
                 {
                     json_object *choices = json_object_object_get(jobj, "choices");
@@ -218,11 +220,11 @@ char *chat_with_zhipu(char *prompt, char *model, int tries, float temperature)
                     json_object *error = json_object_object_get(jobj, "error");
                     json_object *msg = json_object_object_get(error, "message");
                     printf("Zhipu API Error: %s\n", json_object_get_string(msg));
-                    sleep(2); // 等待一段时间以确保服务可以恢复
+                    sleep(2); // Sleep for a small amount of time to ensure that the service can recover
                 }
                 else
                 {
-                    printf("Unexpected Zhipu API response: %s\n", chunk.memory);
+                    printf("Error response is: %s\n", chunk.memory);
                     sleep(2);
                 }
                 json_object_put(jobj);
