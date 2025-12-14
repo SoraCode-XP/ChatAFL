@@ -1003,7 +1003,7 @@ void make_combination(khash_t(strSet)* sequence, char** data , message_set_list*
     {
         if(!kh_exist(sequence,i))
             continue;
-        data[index] = kh_key(sequence,i);
+        data[index] = (char*)kh_key(sequence,i);
         make_combination(sequence, data,res, i+1, end, index+1, size);
     }
 }

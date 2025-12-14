@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 
     // 构造测试提示
     char *test_prompt = NULL;
-    asprintf(&test_prompt, "[{"role": "system", "content": "你是一个有帮助的助手。"}, {"role": "user", "content": "请简单介绍一下人工智能。"}]");
+    asprintf(&test_prompt, "[{\"role\": \"system\", \"content\": \"你是一个有帮助的助手。\"}, {\"role\": \"user\", \"content\": \"请简单介绍一下人工智能。\"}]");
 
     printf("正在测试智谱API调用...\n");
     printf("模型: %s\n", model);
