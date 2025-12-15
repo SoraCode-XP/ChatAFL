@@ -1,15 +1,25 @@
 #!/bin/bash
 
-if [ -z $KEY ]; then
-    echo "NO OPENAI API KEY PROVIDED! Please set the KEY environment variable"
+if [ -z $KEY ] && [ -z $ZHIPU_KEY ]; then
+    echo "NO API KEY PROVIDED! Please set either the KEY (OpenAI) or ZHIPU_KEY (Zhipu AI) environment variable"
     exit 0
 fi
 
-# Update the openAI key
-for x in ChatAFL ChatAFL-CL1 ChatAFL-CL2;
+if [ ! -z $KEY ]; then
+    echo "OpenAI API key provided"
+fi
+
+if [ ! -z $ZHIPU_KEY ]; then
+    echo "Zhipu AI API key provided"
+fi
+
+# Update the openAI key if provided
+if [ ! -z $KEY ]; then
+  for x in ChatAFL ChatAFL-CL1 ChatAFL-CL2;
 do
   sed -i "s/#define OPENAI_TOKEN \".*\"/#define OPENAI_TOKEN \"$KEY\"/" $x/chat-llm.h
 done
+fi
 
 # Check and update Zhipu API key if provided
 if [ ! -z $ZHIPU_KEY ]; then
