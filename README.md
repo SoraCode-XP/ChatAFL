@@ -20,6 +20,7 @@ ChatAFL-Artifact
 ├── ChatAFL: the source code of ChatAFL, with all strategies proposed in the paper
 ├── ChatAFL-CL1: ChatAFL, which only uses the structure-aware mutations (c.f. Ablation study) 
 ├── ChatAFL-CL2: ChatAFL, which only uses the structure-aware and initial seed enrichment (c.f. Ablation study)
+├── ChatAFL-ZP: ChatAFL with Zhipu AI model integration (alternative to OpenAI models)
 ├── deps.sh: the script to install dependencies, asks for the password when executed
 ├── README: this file
 ├── run.sh: the execution script to run fuzzers on subjects and collect data
@@ -58,6 +59,16 @@ KEY=<OPENAI_API_KEY> ./setup.sh
 
 The process is estimated to take about 40 minutes. OPENAI_API_KEY is your OpenAI key and please refer to [this](https://openai.com/) about how to obtain a key.
 
+#### Setting up Zhipu AI API Key (Optional)
+
+If you want to use ChatAFL-ZP (ChatAFL with Zhipu AI model), you can also set the Zhipu API key:
+
+```bash
+KEY=<OPENAI_API_KEY> ZHIPU_KEY=<ZHIPU_API_KEY> ./setup.sh
+```
+
+ZHIPU_API_KEY is your Zhipu AI key and please refer to [this](https://open.bigmodel.cn/) about how to obtain a key. Note that setting the Zhipu key is optional - if not provided, ChatAFL-ZP will not be configured properly.
+
 ### 1.3. Running Experiments
 
 Utilize the `run.sh` script to run experiments. The command is as follows:
@@ -67,6 +78,18 @@ Utilize the `run.sh` script to run experiments. The command is as follows:
 ```
 
 Where `container_number` specifies how many containers are created to run a single fuzzer on a particular subject (each container runs one fuzzer on one subject). `fuzzed_time` indicates the fuzzing time in minutes. `subjects` is the list of subjects under test, and `fuzzers` is the list of fuzzers that are utilized to fuzz subjects. For example, the command (`run.sh 1 5 pure-ftpd chatafl`) would create 1 container for the fuzzer ChatAFL to fuzz the subject pure-ftpd for 5 minutes. In a short cut, one can execute all fuzzers and all subjects by using the writing `all` in place of the subject and fuzzer list.
+
+#### Using ChatAFL-ZP
+
+To use ChatAFL-ZP (ChatAFL with Zhipu AI model), make sure you have set the ZHIPU_KEY environment variable during setup, then use `chatafl-zp` as the fuzzer name in your run command:
+
+```bash
+# Run ChatAFL-ZP on a specific subject
+./run.sh 1 60 lightftp chatafl-zp
+
+# Compare ChatAFL-ZP with other fuzzers
+./run.sh 1 60 lightftp chatafl,chatafl-zp,aflnet
+```
 
 When the script completes, in the `benchmark` directory a folder `result-<name of subject>` will be created, containing fuzzing results for each run.
 

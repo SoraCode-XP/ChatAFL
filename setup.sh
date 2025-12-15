@@ -11,6 +11,15 @@ do
   sed -i "s/#define OPENAI_TOKEN \".*\"/#define OPENAI_TOKEN \"$KEY\"/" $x/chat-llm.h
 done
 
+# Check and update Zhipu API key if provided
+if [ ! -z $ZHIPU_KEY ]; then
+    echo "Setting Zhipu API key..."
+    sed -i "s/#define ZHIPU_TOKEN ".*"/#define ZHIPU_TOKEN "$ZHIPU_KEY"/" ChatAFL-ZP/chat-llm.h
+    echo "Zhipu API key updated successfully!"
+else
+    echo "No Zhipu API key provided. You can set it later using the ZHIPU_KEY environment variable."
+fi
+
 # Copy the different versions of ChatAFL to the benchmark directories
 for subject in ./benchmark/subjects/*/*; do
   rm -r $subject/aflnet 2>&1 >/dev/null

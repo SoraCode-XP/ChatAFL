@@ -25,6 +25,7 @@ ChatAFL-Artifact
 ├── ChatAFL: ChatAFL 的源代码，包含论文中提出的所有策略
 ├── ChatAFL-CL1: 仅使用结构感知变异的 ChatAFL（参见消融研究）
 ├── ChatAFL-CL2: 使用结构感知和初始种子增强的 ChatAFL（参见消融研究）
+├── ChatAFL-ZP: 集成智谱AI模型的ChatAFL（OpenAI模型的替代方案）
 ├── deps.sh: 安装依赖项的脚本，执行时需要密码
 ├── README.md: 英文版说明文件
 ├── README_CN.md: 中文版说明文件（本文件）
@@ -65,6 +66,16 @@ KEY=<你的OPENAI_API_KEY> ./setup.sh
 ```
 
 这个过程大约需要 40 分钟。OPENAI_API_KEY 是您的 OpenAI 密钥，请参考 [OpenAI 官方网站](https://openai.com/) 了解如何获取密钥。
+
+#### 设置智谱AI API密钥（可选）
+
+如果您想使用 ChatAFL-ZP（集成智谱AI模型的ChatAFL），也可以设置智谱API密钥：
+
+```bash
+KEY=<你的OPENAI_API_KEY> ZHIPU_KEY=<你的智谱API密钥> ./setup.sh
+```
+
+ZHIPU_KEY 是您的智谱AI密钥，请参考 [智谱AI开放平台](https://open.bigmodel.cn/) 了解如何获取密钥。注意，设置智谱密钥是可选的 - 如果未提供，ChatAFL-ZP 将无法正确配置。
 
 ### 3. 配置文件说明
 
@@ -117,6 +128,18 @@ Dockerfile 定义了 ChatAFL 的运行环境，基于 Ubuntu 18.04，并安装�
 例如，命令 `run.sh 1 5 pure-ftpd chatafl` 将创建 1 个容器，让 ChatAFL 模糊测试器对 pure-ftpd 目标进行 5 分钟的测试。
 
 可以使用 `all` 代替目标和模糊测试器列表，以运行所有模糊测试器和目标。
+
+#### 使用 ChatAFL-ZP
+
+要使用 ChatAFL-ZP（集成智谱AI模型的ChatAFL），请确保在设置过程中设置了 ZHIPU_KEY 环境变量，然后在运行命令中使用 `chatafl-zp` 作为模糊测试器名称：
+
+```bash
+# 在特定目标上运行 ChatAFL-ZP
+./run.sh 1 60 lightftp chatafl-zp
+
+# 比较 ChatAFL-ZP 与其他模糊测试器
+./run.sh 1 60 lightftp chatafl,chatafl-zp,aflnet
+```
 
 脚本完成后，在 `benchmark` 目录中将创建一个 `result-<目标名称>` 文件夹，包含每次运行的模糊测试结果。
 
