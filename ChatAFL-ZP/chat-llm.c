@@ -56,7 +56,13 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     } else {
         url = "https://api.openai.com/v1/chat/completions";
     }
-    char *auth_header = "Authorization: Bearer " OPENAI_TOKEN;
+    char *auth_header;
+    // 检查是否使用智谱AI模型
+    if (strcmp(model, "glm-4.5-flash") == 0 || strcmp(model, "glm-4") == 0 || strcmp(model, "glm-3-turbo") == 0) {
+        auth_header = "Authorization: Bearer " ZHIPU_TOKEN;
+    } else {
+        auth_header = "Authorization: Bearer " OPENAI_TOKEN;
+    }
     char *content_header = "Content-Type: application/json";
     char *accept_header = "Accept: application/json";
     char *data = NULL;

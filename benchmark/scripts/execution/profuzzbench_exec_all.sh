@@ -39,7 +39,7 @@ do
         then
 
             cd $PFBENCH
-            mkdir results-lightftp
+            mkdir -p results-lightftp
 
             if [[ $FUZZER == "aflnet" ]] || [[ $FUZZER == "all" ]]
             then
@@ -73,7 +73,7 @@ do
         then
 
             cd $PFBENCH
-            mkdir results-bftpd
+            mkdir -p results-bftpd
 
             if [[ $FUZZER == "aflnet" ]] || [[ $FUZZER == "all" ]]
             then
@@ -107,7 +107,7 @@ do
         then
 
             cd $PFBENCH
-            mkdir results-proftpd
+            mkdir -p results-proftpd
 
             if [[ $FUZZER == "aflnet" ]] || [[ $FUZZER == "all" ]]
             then
@@ -140,7 +140,7 @@ do
         then
 
             cd $PFBENCH
-            mkdir results-pure-ftpd
+            mkdir -p results-pure-ftpd
 
             if [[ $FUZZER == "aflnet" ]] || [[ $FUZZER == "all" ]]
             then
@@ -176,7 +176,7 @@ do
         then
 
             cd $PFBENCH
-            mkdir results-exim
+            mkdir -p results-exim
 
             if [[ $FUZZER == "aflnet" ]] || [[ $FUZZER == "all" ]]
             then
@@ -212,7 +212,7 @@ do
         then
 
             cd $PFBENCH
-            mkdir results-live555
+            mkdir -p results-live555
 
             if [[ $FUZZER == "aflnet" ]] || [[ $FUZZER == "all" ]]
             then
