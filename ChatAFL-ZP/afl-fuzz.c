@@ -2697,7 +2697,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
 
     ck_free(regions);
 
-    if(kh_size(messages) == 0)
+    if(kh_size(messages) == 0) 
     {
       kh_destroy(strSet,messages);
       // No missing message types, cannot enrich
@@ -10684,7 +10684,7 @@ int main(int argc, char **argv)
     message_types_set = kh_init(strSet);
 
     setup_llm_grammars();
-    //enrich_testcases();
+    enrich_testcases();
   }
   read_testcases();
   load_auto();

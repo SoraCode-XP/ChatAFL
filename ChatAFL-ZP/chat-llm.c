@@ -44,22 +44,16 @@ static size_t chat_with_llm_helper(void *contents, size_t size, size_t nmemb, vo
 
 char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 {
-    // 如果模型是zhipu开头，则调用智谱API
-    if (model && strncmp(model, "zhipu", 5) == 0) {
-        return chat_with_zhipu(prompt, model, tries, temperature);
-    }
-    
-    // 否则使用OpenAI API
     CURL *curl;
     CURLcode res = CURLE_OK;
     char *answer = NULL;
     char *url = NULL;
-    if (strcmp(model, "instruct") == 0)
-    {
+    // 检查是否使用智谱AI模型
+    if (strcmp(model, "glm-4.5-flash") == 0 || strcmp(model, "glm-4") == 0 || strcmp(model, "glm-3-turbo") == 0) {
+        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+    } else if (strcmp(model, "instruct") == 0) {
         url = "https://api.openai.com/v1/completions";
-    }
-    else
-    {
+    } else {
         url = "https://api.openai.com/v1/chat/completions";
     }
     char *auth_header = "Authorization: Bearer " OPENAI_TOKEN;
@@ -129,103 +123,6 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                 {
                     printf("Error response is: %s\n", chunk.memory);
                     sleep(2); // Sleep for a small amount of time to ensure that the service can recover
-                }
-                json_object_put(jobj);
-            }
-            else
-            {
-                printf("Error: %s\n", curl_easy_strerror(res));
-            }
-
-            curl_slist_free_all(headers);
-            curl_easy_cleanup(curl);
-        }
-
-        free(chunk.memory);
-    } while ((res != CURLE_OK || answer == NULL) && (--tries > 0));
-
-    if (data != NULL)
-    {
-        free(data);
-    }
-
-    curl_global_cleanup();
-    return answer;
-}
-
-char *chat_with_zhipu(char *prompt, char *model, int tries, float temperature)
-{
-    CURL *curl;
-    CURLcode res = CURLE_OK;
-    char *answer = NULL;
-    char *url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-    char *auth_header = "Authorization: Bearer " ZHIPU_TOKEN;
-    char *content_header = "Content-Type: application/json";
-    char *accept_header = "Accept: application/json";
-    char *data = NULL;
-    
-    // Use Zhipu model, default is glm-4
-    const char *zhipu_model = "glm-4";
-    if (model && (strcmp(model, "glm-3-turbo") == 0 || strcmp(model, "zhipu-glm-3-turbo") == 0)) {
-        zhipu_model = "glm-3-turbo";
-    } else if (model && (strcmp(model, "glm-4") == 0 || strcmp(model, "zhipu-glm-4") == 0 || strcmp(model, "zhipu") == 0)) {
-        zhipu_model = "glm-4";
-    }
-    
-    asprintf(&data, "{\"model\": \"%s\",\"messages\": %s, \"max_tokens\": %d, \"temperature\": %f}", zhipu_model, prompt, MAX_TOKENS, temperature);
-    
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-    do
-    {
-        struct MemoryStruct chunk;
-
-        chunk.memory = malloc(1); /* will be grown as needed by the realloc above */
-        chunk.size = 0;           /* no data at this point */
-
-        curl = curl_easy_init();
-        if (curl)
-        {
-            struct curl_slist *headers = NULL;
-            headers = curl_slist_append(headers, auth_header);
-            headers = curl_slist_append(headers, content_header);
-            headers = curl_slist_append(headers, accept_header);
-
-            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
-            curl_easy_setopt(curl, CURLOPT_URL, url);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, chat_with_llm_helper);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-
-            res = curl_easy_perform(curl);
-
-            if (res == CURLE_OK)
-            {
-                json_object *jobj = json_tokener_parse(chunk.memory);
-
-                // Check if the "choices" key exists (same as OpenAI)
-                if (json_object_object_get_ex(jobj, "choices", NULL))
-                {
-                    json_object *choices = json_object_object_get(jobj, "choices");
-                    json_object *first_choice = json_object_array_get_idx(choices, 0);
-                    json_object *jobj4 = json_object_object_get(first_choice, "message");
-                    json_object *jobj5 = json_object_object_get(jobj4, "content");
-                    const char *data = json_object_get_string(jobj5);
-                    
-                    if (data[0] == '\n')
-                        data++;
-                    answer = strdup(data);
-                }
-                else if (json_object_object_get_ex(jobj, "error", NULL))
-                {
-                    json_object *error = json_object_object_get(jobj, "error");
-                    json_object *msg = json_object_object_get(error, "message");
-                    printf("Zhipu API Error: %s\n", json_object_get_string(msg));
-                    sleep(2); // Sleep for a small amount of time to ensure that the service can recover
-                }
-                else
-                {
-                    printf("Error response is: %s\n", chunk.memory);
-                    sleep(2);
                 }
                 json_object_put(jobj);
             }
@@ -1005,7 +902,7 @@ void make_combination(khash_t(strSet)* sequence, char** data , message_set_list*
     {
         if(!kh_exist(sequence,i))
             continue;
-        data[index] = (char*)kh_key(sequence,i);
+        data[index] = kh_key(sequence,i);
         make_combination(sequence, data,res, i+1, end, index+1, size);
     }
 }
