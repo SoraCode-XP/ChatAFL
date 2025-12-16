@@ -52,6 +52,10 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     // 添加日志：记录大模型调用开始
     ACTF("Calling LLM model: %s with temperature: %.1f", model, temperature);
     ACTF("Prompt length: %d characters", (int)strlen(prompt));
+    
+    // 声明外部变量 out_dir
+    extern u8 *out_dir;
+    
     // 保存提示词到文件以便调试
     char *prompt_log_file = alloc_printf("%s/llm_prompts/prompt_%ld.txt", out_dir, time(NULL));
     FILE *prompt_log = fopen(prompt_log_file, "w");
@@ -924,7 +928,7 @@ void make_combination(khash_t(strSet)* sequence, char** data , message_set_list*
         khash_t(strSet)* combination = kh_init(strSet);
         int absent;
         for (int j=0; j<size; j++){
-            kh_put(strSet,combination, data[j],&absent );
+            kh_put(strSet,combination, (char*)data[j],&absent );
         }
         kv_push(khash_t(strSet)*,*res,combination);
         return;
