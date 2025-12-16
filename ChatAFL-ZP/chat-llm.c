@@ -50,49 +50,29 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     CURLcode res = CURLE_OK;
     char *answer = NULL;
     char *url = NULL;
-    
+
     // 添加日志：记录大模型调用开始
     ACTF("Calling LLM model: %s with temperature: %.1f", model, temperature);
     ACTF("Prompt length: %d characters", (int)strlen(prompt));
 
-    // 检查是否使用智谱AI模型
-    if (strcmp(model, "glm-4.5-flash") == 0 || strcmp(model, "glm-4") == 0 || strcmp(model, "glm-3-turbo") == 0) {
-        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-    } else if (strcmp(model, "instruct") == 0) {
-        url = "https://api.openai.com/v1/completions";
-    } else {
-        url = "https://api.openai.com/v1/chat/completions";
-    }
+    // 统一使用智谱AI的glm-4.5-flash模型
+    url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+
     char *auth_header;
-    // 检查是否使用智谱AI模型
-    if (strcmp(model, "glm-4.5-flash") == 0 || strcmp(model, "glm-4") == 0 || strcmp(model, "glm-3-turbo") == 0) {
-        // 智谱AI的token需要从环境变量获取
-        char *zhipu_token = getenv("ZHIPU_TOKEN");
-        if (!zhipu_token) {
-            printf("Error: ZHIPU_TOKEN environment variable not set\n");
-            return NULL;
-        }
-        asprintf(&auth_header, "Authorization: Bearer %s", zhipu_token);
-    } else {
-        // OpenAI的token需要从环境变量获取
-        char *openai_token = getenv("OPENAI_TOKEN");
-        if (!openai_token) {
-            printf("Error: OPENAI_TOKEN environment variable not set\n");
-            return NULL;
-        }
-        asprintf(&auth_header, "Authorization: Bearer %s", openai_token);
+    // 统一使用智谱AI的token
+    char *zhipu_token = getenv("ZHIPU_TOKEN");
+    if (!zhipu_token) {
+        printf("Error: ZHIPU_TOKEN environment variable not set\n");
+        return NULL;
     }
+    asprintf(&auth_header, "Authorization: Bearer %s", zhipu_token);
+
     char *content_header = "Content-Type: application/json";
     char *accept_header = "Accept: application/json";
     char *data = NULL;
-    if (strcmp(model, "instruct") == 0)
-    {
-        asprintf(&data, "{\"model\": \"gpt-3.5-turbo-instruct\", \"prompt\": \"%s\", \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
-    }
-    else
-    {
-        asprintf(&data, "{\"model\": \"gpt-3.5-turbo\",\"messages\": %s, \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
-    }
+    // 统一使用glm-4.5-flash模型
+    asprintf(&data, "{"model": "glm-4.5-flash","messages": %s, "max_tokens": %d, "temperature": %f}", prompt, MAX_TOKENS, temperature);
+
     curl_global_init(CURL_GLOBAL_DEFAULT);
     do
     {
@@ -128,22 +108,15 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                     json_object *first_choice = json_object_array_get_idx(choices, 0);
                     const char *data;
 
-                    // The answer begins with a newline character, so we remove it
-                    if (strcmp(model, "instruct") == 0)
-                    {
-                        json_object *jobj4 = json_object_object_get(first_choice, "text");
-                        data = json_object_get_string(jobj4);
-                    }
-                    else
-                    {
-                        json_object *jobj4 = json_object_object_get(first_choice, "message");
-                        json_object *jobj5 = json_object_object_get(jobj4, "content");
-                        data = json_object_get_string(jobj5);
-                    }
+                    // 统一使用智谱AI的响应格式
+                    json_object *jobj4 = json_object_object_get(first_choice, "message");
+                    json_object *jobj5 = json_object_object_get(jobj4, "content");
+                    data = json_object_get_string(jobj5);
+
                     if (data[0] == '\n')
                         data++;
                     answer = strdup(data);
-                    
+
                     // 添加日志：记录大模型调用成功
                     ACTF("LLM call successful. Response length: %d characters", (int)strlen(answer));
                 }
@@ -179,7 +152,7 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 {
     char *template = "In the %s protocol, the communication history between the %s client and the %s server is as follows."
                      "The next proper client request that can affect the server's state are:\\n\\n"
-                     "Desired format of real client requests:\\n%sCommunication History:\\n\\\"\\\"\\\"\\n%s\\\"\\\"\\\"";
+                     "Desired format of real client requests:\\n%sCommunication History:\\\\"\\\"\\\"\\n%s\\\"\\\"\\\"";
 
     char *prompt = NULL;
     asprintf(&prompt, template, protocol_name, protocol_name, protocol_name, examples, history);
@@ -197,14 +170,14 @@ char *construct_prompt_for_templates(char *protocol_name, char **final_msg)
 {
     // Give one example for learning formats
     char *prompt_rtsp_example = "For the RTSP protocol, the DESCRIBE client request template is:\\n"
-                                "DESCRIBE: [\\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"CSeq: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"User-Agent: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"Accept: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"\\\\r\\\\n\\\"]";
+                                "DESCRIBE: [\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\","
+                                "\\"CSeq: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"User-Agent: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"Accept: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"\\\\r\\\\n\\"]";
 
     char *prompt_http_example = "For the HTTP protocol, the GET client request template is:\\n"
-                                "GET: [\\\"GET <<VALUE>>\\\\r\\\\n\\\"]";
+                                "GET: [\\"GET <<VALUE>>\\\\r\\\\n\\"]";
 
     char *msg = NULL;
     asprintf(&msg, "%s\\n%s\\nFor the %s protocol, all of client request templates are :", prompt_rtsp_example, prompt_http_example, protocol_name);
@@ -228,9 +201,6 @@ char *construct_prompt_for_remaining_templates(char *protocol_name, char *first_
     asprintf(&second_question, "For the %s protocol, other templates of client requests are:", protocol_name);
 
     json_object *answer_str = json_object_new_string(first_answer);
-    // printf("The First Question\n%s\n\n", first_question);
-    // printf("The First Answer\n%s\n\n", first_answer);
-    // printf("The Second Question\n%s\n\n", second_question);
     const char *answer_str_escaped = json_object_to_json_string(answer_str);
 
     char *prompt = NULL;
@@ -256,7 +226,7 @@ char *extract_stalled_message(char *message, size_t message_len)
     int errornumber;
     size_t erroroffset;
     // After a lot of iterations, the model consistently responds with an empty line and then a line of text
-    pcre2_code *extracter = pcre2_compile("\r?\n?.*?\r?\n", PCRE2_ZERO_TERMINATED, 0, &errornumber, &erroroffset, NULL);
+    pcre2_code *extracter = pcre2_compile("\\r?\\n?.*?\\r?\\n", PCRE2_ZERO_TERMINATED, 0, &errornumber, &erroroffset, NULL);
     pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(extracter, NULL);
     int rc = pcre2_match(extracter, message, message_len, 0, 0, match_data, NULL);
     char *res = NULL;
@@ -508,10 +478,10 @@ char *extract_message_pattern(const char *header_str, khash_t(field_table) * fie
         header_str++;
 
         int message_len = 0;
-        while (header_str[message_len] != '\0' 
-        && header_str[message_len] != ' ' 
-        && header_str[message_len] != '\n' 
-        && header_str[message_len] != '\r' 
+        while (header_str[message_len] != '\0'
+        && header_str[message_len] != ' '
+        && header_str[message_len] != '\n'
+        && header_str[message_len] != '\r'
         && header_str[message_len] != '\\' )
         {
             message_len++;
@@ -664,137 +634,25 @@ range_list get_mutable_ranges(char *line, int length, int offset, pcre2_code *pa
             break;
         }
         PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data);
-        if (offset != ovector[0])
-        {
-            range v = {.start = offset, .len = ovector[0] - offset, .mutable = 1};
-            kv_push(range, dyn_ranges, v);
-        }
-
-        // printf("Matched over %d %d\n", ovector[0], ovector[1]);
+        // printf("RC is %d\n",rc);
+        // for(int i = 1; i<rc;i++){
+        //     printf("Group %d %d %d\n",i, ovector[2*i],ovector[2*i+1]);
+        // }
         for (int i = 1; i < rc; i++)
         {
             if (ovector[2 * i] == -1)
                 continue;
-            // printf("Group %d %d %d\n",i, ovector[2 * i], ovector[2 * i + 1]);
+            // printf("Group %d %d %d\n",i, ovector[2*i],ovector[2*i+1]);
             range v = {.start = ovector[2 * i], .len = ovector[2 * i + 1] - ovector[2 * i], .mutable = 1};
             kv_push(range, dyn_ranges, v);
+            // kv_push(range, dyn_ranges, v);
             // ranges[0][i - 1] = v;
         }
-        if (offset == ovector[1])
-        { // in the case the match is empty, we just move a step forward
-            offset++;
-        }
-        else
-        {
-            offset = ovector[1];
-        }
+        offset = ovector[1];
     }
 
-    if (offset < length) // catch anything past the last matched pattern
-    {
-        range v = {.start = offset, .len = length - offset, .mutable = 1};
-        kv_push(range, dyn_ranges, v);
-    }
-
-    if (match_data != NULL)
-    {
-        pcre2_match_data_free(match_data);
-    }
+    pcre2_match_data_free(match_data);
     return dyn_ranges;
-}
-
-char *unescape_string(const char *input)
-{
-    size_t length = strlen(input);
-    char *output = (char *)malloc((length + 1) * sizeof(char));
-
-    if (output == NULL)
-    {
-        printf("Memory allocation failed.\n");
-        return NULL;
-    }
-
-    size_t i, j = 0;
-    for (i = 0; i < length; i++)
-    {
-        if (input[i] == '\\')
-        {
-            i++; // Skip the backslash
-            switch (input[i])
-            {
-            case 'n':
-                output[j++] = '\n';
-                break;
-            case 't':
-                output[j++] = '\t';
-                break;
-            case 'r':
-                output[j++] = '\r';
-                break;
-            case '\\':
-                output[j++] = '\\';
-                break;
-            default:
-                output[j++] = input[i];
-                break;
-            }
-        }
-        else
-        {
-            output[j++] = input[i];
-        }
-    }
-
-    output[j] = '\0'; // Add null-terminator to the output string
-    return output;
-}
-
-void write_new_seeds(char *enriched_file, char *contents)
-{
-    FILE *fp = fopen(enriched_file, "w");
-    if (fp == NULL)
-    {
-        printf("Error in opening the file %s\n", enriched_file);
-        exit(1);
-    }
-
-    // remove the newline and whiltespace in the beginning of the string if any
-    while (contents[0] == '\n' || contents[0] == ' ' || contents[0] == '\t' || contents[0] == '\r')
-    {
-        contents++;
-    }
-
-    // Check if last 4 characters of the client_request_answer string are \r\n\r\n
-    // If not, add them
-    int len = strlen(contents);
-    if (contents[len - 1] != '\n' || contents[len - 2] != '\r' || contents[len - 3] != '\n' || contents[len - 4] != '\r')
-    {
-        fprintf(fp, "%s\r\n\r\n", contents);
-    }
-    else
-    {
-        fprintf(fp, "%s", contents);
-    }
-
-    fclose(fp);
-}
-
-char *format_string(char *state_string)
-{
-    // remove the newline and whiltespace in the beginning of the string if any
-    while (state_string[0] == '\n' || state_string[0] == ' ' || state_string[0] == '\t' || state_string[0] == '\r')
-    {
-        state_string++;
-    }
-
-    int len = strlen(state_string);
-    while (state_string[len - 1] == '\n' || state_string[len - 1] == '\r' || state_string[len - 1] == ' ' || state_string[len - 1] == '.')
-    {
-        state_string[len - 1] = '\0';
-        len--;
-    }
-
-    return state_string;
 }
 
 /***
@@ -817,182 +675,82 @@ void get_protocol_message_types(char *state_prompt, khash_t(strSet) * states_set
         char *state_tokens = strtok(state_answer, ",");
         while (state_tokens != NULL)
         {
-            char *protocol_state = state_tokens;
-            protocol_state = format_string(protocol_state);
-            // save the state to the map
-            int ret;
-            khiter_t k = kh_put(strMap, state_to_times, protocol_state, &ret);
-            if (ret == 0)
+            // printf("State token: %s\n", state_tokens);
+            // Remove leading and trailing whitespace
+            while (isspace((unsigned char)*state_tokens))
+                state_tokens++;
+            char *end = state_tokens + strlen(state_tokens) - 1;
+            while (end > state_tokens && isspace((unsigned char)*end))
+                end--;
+            *(end + 1) = '\0';
+
+            khiter_t iter = kh_get(strMap, state_to_times, state_tokens);
+            if (iter != kh_end(state_to_times))
             {
-                kh_value(state_to_times, k)++;
+                kh_value(state_to_times, iter)++;
             }
             else
             {
-                kh_value(state_to_times, k) = 1;
+                int ret;
+                iter = kh_put(strMap, state_to_times, strdup(state_tokens), &ret);
+                kh_value(state_to_times, iter) = 1;
             }
-
             state_tokens = strtok(NULL, ",");
         }
     }
 
-    // traverse the map and get the states whose times are larger than 0.5 * CONFIDENT_TIMES
-    for (khiter_t k = kh_begin(state_to_times); k != kh_end(state_to_times); ++k)
+    // Add the states that appear at least CONFIDENT_TIMES/2 times
+    for (khiter_t iter = kh_begin(state_to_times); iter != kh_end(state_to_times); ++iter)
     {
-        if (kh_exist(state_to_times, k))
+        if (!kh_exist(state_to_times, iter))
+            continue;
+        if (kh_value(state_to_times, iter) >= (CONFIDENT_TIMES / 2 + (CONFIDENT_TIMES % 2)))
         {
-            if (kh_value(state_to_times, k) >= 0.5 * CONFIDENT_TIMES)
-            {
-                const char *protocol_state = kh_key(state_to_times, k);
-                // add the state to the set
-                int ret;
-                kh_put(strSet, states_set, protocol_state, &ret);
-            }
-        }
-    }
-}
-
-khash_t(strSet) * duplicate_hash(khash_t(strSet) * set)
-{
-    khash_t(strSet) *new_set = kh_init(strSet);
-
-    for (khiter_t k = kh_begin(set); k != kh_end(set); ++k)
-    {
-        if (kh_exist(set, k))
-        {
-            const char *val = kh_key(set, k);
             int ret;
-            kh_put(strSet, new_set, val, &ret);
+            khiter_t state_iter = kh_put(strSet, states_set, kh_key(state_to_times, iter), &ret);
+            kh_value(states_set, state_iter) = 1;
         }
     }
 
-    return new_set;
-}
-
-// message_set_list generate_combinations(khash_t(strSet)* sequence, int size)
-// {
-//     if(size == 0)
-//     {
-//         message_set_list output;
-//         kv_init(output);
-//         kv_push(khash_t(strSet)*,output,kh_init(strSet));
-//         return output;
-//     }
-//     else
-//     {
-//         message_set_list subcombinations = generate_combinations(sequence,size-1);
-//         message_set_list newCombinations;
-//         kv_init(newCombinations);
-//         for(int i = 0; i < kv_size(subcombinations);i++)
-//         {
-//             khash_t(strSet)* target = kv_A(subcombinations,i);
-//             khiter_t sequence_iter;
-//             for (sequence_iter = kh_begin(sequence); sequence_iter != kh_end(sequence); sequence_iter++)
-//             {
-//                 if (!kh_exist(sequence, sequence_iter))
-//                     continue;
-//                 khiter_t k = kh_get(strSet, target, kh_val(sequence,sequence_iter));
-//                 if (kh_exist(target, k))
-//                     continue;
-//                 khash_t(strSet)* newCombination = duplicate_hash(target);
-//                 int absent;
-//                 kh_put(strSet,newCombination,kh_val(sequence,sequence_iter))    
-//             }
-//         }
-//         return newCombinations;
-//     }
-// }
-void make_combination(khash_t(strSet)* sequence, char** data , message_set_list* res,khiter_t st, khiter_t end, int index, int size);
-
-message_set_list message_combinations(khash_t(strSet)* sequence, int size)
-{
-    message_set_list res;
-    kv_init(res);
-    char* data[size];
-    make_combination(sequence,data, &res, kh_begin(sequence), kh_end(sequence), 0, size);
-    return res;
-}
-
-void make_combination(khash_t(strSet)* sequence, char** data , message_set_list* res,khiter_t st, khiter_t end,
-                     int index, int size)
-{
-
-    if (index == size)
+    // Free the state_to_times map
+    for (khiter_t iter = kh_begin(state_to_times); iter != kh_end(state_to_times); ++iter)
     {
-        khash_t(strSet)* combination = kh_init(strSet);
-        int absent;
-        for (int j=0; j<size; j++){
-            kh_put(strSet,combination, (char*)data[j],&absent );
-        }
-        kv_push(khash_t(strSet)*,*res,combination);
-        return;
-    }
-    for (khiter_t i=st; i != end && end-i+1 >= size-index; i++)
-    {
-        if(!kh_exist(sequence,i))
+        if (!kh_exist(state_to_times, iter))
             continue;
-        data[index] = (char*)kh_key(sequence,i);
-        make_combination(sequence, data,res, i+1, end, index+1, size);
+        free((char *)kh_key(state_to_times, iter));
     }
+    kh_destroy(strMap, state_to_times);
 }
 
-
-
-int min(int a, int b) {
-    return a < b ? a : b;
-}
-
-char *enrich_sequence(char *sequence, khash_t(strSet) * missing_message_types)
+char *enrich_sequence(char* sequence, khash_t(strSet) *missing_message_types)
 {
-    // 添加日志：记录种子增强开始
-    ACTF("Enriching sequence with %d missing message types", kh_size(missing_message_types));
-    
-    const char *prompt_template =
-        "The following is one sequence of client requests:\\n"
-        "%.*s\\n"
-        "Please add the %.*s client requests in the proper locations, and the modified sequence of client requests is:";
-
+    char *missing_fields_seq = NULL;
     int missing_fields_len = 0;
-    int missing_fields_capacity = 100;
-    char *missing_fields_seq = ck_alloc(missing_fields_capacity);
-
-    khiter_t k;
-    int i = 0;
-    for (k = kh_begin(missing_message_types); 
-    k != kh_end(missing_message_types) && i < min(MAX_ENRICHMENT_MESSAGE_TYPES, kh_size(missing_message_types)); 
-    ++k)
+    for (khiter_t iter = kh_begin(missing_message_types); iter != kh_end(missing_message_types); ++iter)
     {
-        if (!kh_exist(missing_message_types, k))
+        if (!kh_exist(missing_message_types, iter))
             continue;
-        ++i; // Increment only after seeing a message type
-        const char *message_type = kh_key(missing_message_types, k);
-        int needed_len = strlen(message_type) + 2; // add for the ', '
-
-        if (missing_fields_len + needed_len > missing_fields_capacity)
-        {
-            missing_fields_capacity += 2 * needed_len;
-            missing_fields_seq = ck_realloc(missing_fields_seq, missing_fields_capacity);
-        }
-
-        memcpy(missing_fields_seq + missing_fields_len, message_type, strlen(message_type));
-        memcpy(missing_fields_seq + missing_fields_len + needed_len - 2, ", ", 2);
-
-        missing_fields_len += needed_len;
+        missing_fields_len += asprintf(&missing_fields_seq, "%s%s", missing_fields_seq == NULL ? "" : ",", kh_key(missing_message_types, iter));
     }
-    missing_fields_len -= 2; // ignore the last ', '
-
-    char *prompt = NULL;
 
     json_object *sequence_escaped = json_object_new_string(sequence);
     const char *sequence_escaped_str = json_object_to_json_string(sequence_escaped);
-    sequence_escaped_str++;
 
-    int sequence_len = strlen(sequence_escaped_str) - 1;
+    char *prompt_template = "You are given a sequence of client requests in the %s protocol.\n"
+                           "The sequence is as follows: %.*s\n"
+                           "Your task is to enrich the sequence by adding the following message types: %.*s\n"
+                           "The enriched sequence should still follow the %s protocol and be syntactically correct.\n"
+                           "Only return the enriched sequence as a list of client requests, each request should be a string, without any additional text or explanation.\n"
+                           "Example: [\"request1\", \"request2\", \"request3\"]";
+
+    char *prompt = NULL;
+    int sequence_len = strlen(sequence_escaped_str) - 2;
     int allowed_tokens = (MAX_TOKENS - strlen(prompt_template) - missing_fields_len);
     if (sequence_len > allowed_tokens)
     {
         sequence_len = allowed_tokens;
     }
-    asprintf(&prompt, prompt_template, sequence_len, sequence_escaped_str, missing_fields_len, missing_fields_seq);
+    asprintf(&prompt, prompt_template, "RTSP", sequence_len, sequence_escaped_str + 1, missing_fields_len, missing_fields_seq);
     ck_free(missing_fields_seq);
     json_object_put(sequence_escaped);
 
@@ -1007,207 +765,8 @@ char *enrich_sequence(char *sequence, khash_t(strSet) * missing_message_types)
 // // gcc -g -o chat-llm chat-llm.c chat-llm.h -lcurl -ljson-c -lpcre2-8
 // int main(int argc, char **argv)
 // {
-//     char *protocol_name = argv[1];
-//     char *in_dir = argv[2];
-//     khash_t(strSet) *states_set = kh_init(strSet);
-
-//     char *state_prompt = construct_prompt_for_protocol_states(protocol_name);
-
-//     // Get protocol states
-//     get_protocol_message_types(state_prompt, states_set);
-
-//     // traverse the states_set
-//     khiter_t k;
-//     for (k = kh_begin(states_set); k != kh_end(states_set); ++k)
-//     {
-//         if (kh_exist(states_set, k))
-//         {
-//             const char *protocol_state = kh_key(states_set, k);
-//             printf("## State_traverse: %s\n", protocol_state);
-//         }
-//     }
-
-//     // Get seeds to states and save them to the in_dir
-//     get_seeds_to_states(in_dir, states_set, protocol_name);
-
-//     // char *prompt = NULL;
-//     // asprintf(&prompt, "user: The colors of flowers:\\nassistant: red and yellow.\\nuser: Other colors are:");
-//     // printf("## Prompt to LLM:\n %s\n", prompt);
-//     // char *answer = chat_with_llm(prompt, "instruct");
-//     // printf("## Answer from LLM:\n %s\n", answer);
-
-//     char *protocol_name = argv[1];
-//     khash_t(consistency_table) *const_table = kh_init(consistency_table);
-//     klist_t(rang) *protocol_patterns = kl_init(rang);
-
-//     for (int iter = 0; iter < 5; iter++)
-//     {
-
-//         char *templates_prompt = construct_prompt_for_templates(protocol_name);
-//         char *templates_answer = chat_with_llm(templates_prompt, "turbo");
-//         // printf("## Answer from LLM:\n %s\n", templates_answer);
-//         char *remaining_prompt = construct_prompt_for_remaining_templates(protocol_name, templates_prompt, templates_answer);
-//         // printf("remaining prompt is:\n %s\n", remaining_prompt);
-//         char *remaining_templates = chat_with_llm(remaining_prompt, "turbo");
-//         // printf("## Remaining templates:\n %s\n", remaining_templates);
-
-//         char *combined_templates = NULL;
-//         asprintf(&combined_templates, "%s\n%s", templates_answer, remaining_templates);
-
-//         printf("The final info is\n%s\n", combined_templates);
-//         klist_t(gram) *grammar_list = kl_init(gram);
-//         extract_message_grammars(combined_templates, grammar_list);
-
-//         kliter_t(gram) * iter;
-//         for (iter = kl_begin(grammar_list); iter != kl_end(grammar_list); iter = kl_next(iter))
-//         {
-//             json_object *jobj = kl_val(iter);
-
-//             json_object *header = json_object_array_get_idx(jobj, 0);
-
-//             int absent;
-
-//             const char *header_str = json_object_get_string(header);
-
-//             khiter_t k = kh_put(consistency_table, const_table, header_str, &absent);
-//             if (absent)
-//             {
-//                 khash_t(field_table) *field_table = kh_init(field_table);
-//                 kh_value(const_table, k) = field_table;
-//             }
-
-//             for (int i = 1; i < json_object_array_length(jobj); i++)
-//             {
-//                 const char *v = json_object_get_string(json_object_array_get_idx(jobj, i));
-//                 khash_t(field_table) *field_table = kh_value(const_table, k);
-//                 khiter_t field_k = kh_put(field_table, field_table, v, &absent);
-//                 if (absent)
-//                 {
-//                     kh_value(field_table, field_k) = 0;
-//                 }
-//                 kh_value(field_table, field_k)++;
-//             }
-//         }
-//         kl_destroy_gram(grammar_list);
-//     }
-
-//     for (khiter_t con_t_iter = kh_begin(const_table); con_t_iter != kh_end(const_table); ++con_t_iter)
-//     {
-//         if (kh_exist(const_table, con_t_iter))
-//         {
-//             pcre2_code **patterns = ck_alloc(2 * sizeof(pcre2_code *));
-
-//             khash_t(field_table) *field_table = kh_value(const_table, con_t_iter);
-//             const char* header_str = json_object_to_json_string(json_object_new_string(kh_key(const_table, con_t_iter)));
-
-//             extract_message_pattern_k(header_str,field_table, patterns);
-//             *kl_pushp(rang, protocol_patterns) = patterns;
-//         }
-//     }
-
-//     char *demo_lines[] = {
-
-//         "DESCRIBE 123\r\n"
-//         "CSeq: 1212313\r\n"
-//         "User-Agent: 1212313\r\n"
-//         "Accept: 1212313\r\n"
-//         "\r\n",
-
-//         "DESCRIBE 123\r\n"
-//         "DESCRIBE 123\r\n"
-//         "User-Agent: 1212313\r\n"
-//         "CSeq: 1212313\r\n"
-//         "Accept: 1212313\r\n"
-//         "\r\n",
-
-//         "DESCRIBE 123\r\n"
-//         "1231321321321"
-//         "User-Agent: 1212313\r\n"
-//         "CSeq: 1212313\r\n"
-//         "Accept: 1212313\r\n"
-//         "\r\n"
-//         "1231321321321",
-
-//         "DESCRIBE 123\r\n"
-//         "1231321321321"
-//         "User-Agent: 1212313\r\n"
-//         "CSeq: 1212313\r1231321321321\n"
-//         "Accept: 1212313\r\n"
-//         "\r\n"
-//         "1231321321321",
-
-//         "PLAY 123\r\n"
-//         "CSeq: 1212313\r\n"
-//         "DESCRIBE 123\r\n"
-//         "User-Agent: 1212313\r\n"
-//         "Session: 1212313\r\n"
-//         "Range: 1212313\r\n"
-//         "\r\n",
-
-//     };
-
-// char* answers = "For the RTSP protocol, the DESCRIBE client request template is:"
-//     "{\"DESCRIBE\":\"string\\r\\n\",\"CSeq:\":\"integer\\r\\n\",\"User-Agent:\":\"string\\r\\n\",\"Accept:\":\"string\\r\\n\\r\\n\"}."
-//     "For the RTSP protocol, the DESCRIBE client request template is:{\"DESCRIBE\":\"string\\r\\n\",\"CSeq:\":\"integer\\r\\n\",\"User-Agent:\":\"string\\r\\n\",\"Accept:\":\"string\\r\\n\\r\\n\"}";
-
-// for (int demo = 0; demo < sizeof(demo_lines) / sizeof(char *); demo++)
-// {
-//     printf("\nTrying to match \n%s\n\n", demo_lines[demo]);
-//     int max_rc = -1;
-//     kliter_t(rang) * iter_rang;
-//     range_list max_ranges;
-//     int i = 0;
-//     for (iter_rang = kl_begin(protocol_patterns); iter_rang != kl_end(protocol_patterns); iter_rang = kl_next(iter_rang),i++)
-//     {
-//         // printf("Compare! \n");
-
-//         pcre2_code **patterns = kl_val(iter_rang);
-//         pcre2_code *header_pattern = patterns[0];
-//         pcre2_code *fields_pattern = patterns[1];
-
-//         range_list header_ranges = starts_with(demo_lines[demo], strlen(demo_lines[demo]), header_pattern);
-//         kv_init(header_ranges);
-
-//         if (kv_size(header_ranges) == 0)
-//         {
-//             printf("Demo %d Did not match pattern %d\n", demo, i);
-//             continue;
-//         }
-//         else
-//         {
-//             printf("Demo %d Did matched pattern %d\n", demo, i);
-//             range header_match = kv_pop(header_ranges);
-//             char *offsetted_line = demo_lines[demo];
-//             size_t offsetted_len = strlen(demo_lines[demo]);
-//             range_list field_ranges = get_mutable_ranges(offsetted_line,offsetted_len, header_match.len,fields_pattern);
-
-//             for(int i = 0; i < kv_size(field_ranges);i++){
-//                 kv_push(range, header_ranges, kv_A(field_ranges,i));
-//             }
-//             kv_destroy(field_ranges);
-
-//             max_ranges = header_ranges;
-
-//             break;
-//         }
-//     }
-
-//     if (max_rc != -1)
-//     {
-//         printf("Matched! \n");
-//         for (int i = 0; i < max_rc; i++)
-//         {
-//             printf("start=%d len=%d mutable=%d\n", kv_A(max_ranges,i).start,kv_A(max_ranges,i).len, kv_A(max_ranges,i).mutable);
-//             printf("content=%s\n", json_object_to_json_string(json_object_new_string_len(demo_lines[demo] + kv_A(max_ranges,i).start, kv_A(max_ranges,i).len)));
-//         }
-//     }
-//     else
-//     {
-//         printf("No matches\n");
-//     }
-// }
-
-// Traverse the list
-
+//     char *prompt = "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"In the RTSP protocol, what are the message types?\n\nDesired format:\n<comma_separated_list_of_message_types_in_uppercase_and_without_whitespaces>\"}]";
+//     char *answer = chat_with_llm(prompt, "instruct", 3, 0.5);
+//     printf("Answer: %s\n", answer);
 //     return 0;
 // }
