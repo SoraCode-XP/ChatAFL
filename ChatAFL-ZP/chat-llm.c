@@ -11,7 +11,10 @@
 #include "hash.h"
 
 // 声明外部变量 out_dir
-extern u8 *out_dir;
+#ifndef EXP_ST
+#define EXP_ST extern
+#endif
+EXP_ST u8 *out_dir;
 
 // -lcurl -ljson-c -lpcre2-8
 // apt install libcurl4-openssl-dev libjson-c-dev libpcre2-dev libpcre2-8-0
