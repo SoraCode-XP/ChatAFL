@@ -152,7 +152,7 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 {
     char *template = "In the %s protocol, the communication history between the %s client and the %s server is as follows."
                      "The next proper client request that can affect the server's state are:\\n\\n"
-                     "Desired format of real client requests:\\n%sCommunication History:\\n\\\"\\\"\\\"\\n%s\\\"\\\"\\\"";
+                     "Desired format of real client requests:\\n%sCommunication History:\\\\"\\\"\\\"\\n%s\\\"\\\"\\\"";
 
     char *prompt = NULL;
     asprintf(&prompt, template, protocol_name, protocol_name, protocol_name, examples, history);
@@ -170,14 +170,14 @@ char *construct_prompt_for_templates(char *protocol_name, char **final_msg)
 {
     // Give one example for learning formats
     char *prompt_rtsp_example = "For the RTSP protocol, the DESCRIBE client request template is:\\n"
-                                "DESCRIBE: [\\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"CSeq: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"User-Agent: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"Accept: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"\\\\r\\\\n\\\"]";
+                                "DESCRIBE: [\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\","
+                                "\\"CSeq: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"User-Agent: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"Accept: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"\\\\r\\\\n\\"]";
 
     char *prompt_http_example = "For the HTTP protocol, the GET client request template is:\\n"
-                                "GET: [\\\"GET <<VALUE>>\\\\r\\\\n\\\"]";
+                                "GET: [\\"GET <<VALUE>>\\\\r\\\\n\\"]";
 
     char *msg = NULL;
     asprintf(&msg, "%s\\n%s\\nFor the %s protocol, all of client request templates are :", prompt_rtsp_example, prompt_http_example, protocol_name);
@@ -295,6 +295,206 @@ char *format_request_message(char *message)
     res[res_len++] = '\0';
     free(message);
     return res;
+}
+
+// 添加缺失的函数实现
+
+// 复制哈希表
+khash_t(strSet)* duplicate_hash(khash_t(strSet)* set) {
+    if (!set) return NULL;
+    
+    khash_t(strSet)* new_set = kh_init(strSet);
+    if (!new_set) return NULL;
+    
+    for (khiter_t k = kh_begin(set); k != kh_end(set); ++k) {
+        if (kh_exist(set, k)) {
+            const char* key = kh_key(set, k);
+            int ret;
+            khiter_t new_k = kh_put(strSet, new_set, key, &ret);
+            if (ret != -1) {
+                kh_key(new_set, new_k) = key;
+            }
+        }
+    }
+    
+    return new_set;
+}
+
+// 生成消息组合
+message_set_list message_combinations(khash_t(strSet)* sequence, int size) {
+    message_set_list result;
+    kv_init(result);
+    
+    if (!sequence || kh_size(sequence) == 0 || size <= 0) {
+        return result;
+    }
+    
+    // 获取所有消息类型
+    kvec_t(const char*) messages;
+    kv_init(messages);
+    
+    for (khiter_t k = kh_begin(sequence); k != kh_end(sequence); ++k) {
+        if (kh_exist(sequence, k)) {
+            kv_push(const char*, messages, kh_key(sequence, k));
+        }
+    }
+    
+    int count = kv_size(messages);
+    if (count == 0) {
+        kv_destroy(messages);
+        return result;
+    }
+    
+    // 生成所有可能的组合
+    if (size >= count) {
+        // 如果请求的大小大于等于消息数量，则返回整个集合
+        khash_t(strSet)* full_set = duplicate_hash(sequence);
+        kv_push(khash_t(strSet)*, result, full_set);
+    } else {
+        // 生成所有可能的子集
+        // 这里使用简单的组合算法
+        int* indices = (int*)ck_alloc(size * sizeof(int));
+        for (int i = 0; i < size; i++) {
+            indices[i] = i;
+        }
+        
+        while (1) {
+            // 创建当前组合的集合
+            khash_t(strSet)* subset = kh_init(strSet);
+            for (int i = 0; i < size; i++) {
+                const char* msg = kv_A(messages, indices[i]);
+                int ret;
+                khiter_t k = kh_put(strSet, subset, msg, &ret);
+                if (ret != -1) {
+                    kh_key(subset, k) = msg;
+                }
+            }
+            kv_push(khash_t(strSet)*, result, subset);
+            
+            // 找到下一个组合
+            int i;
+            for (i = size - 1; i >= 0; i--) {
+                if (indices[i] < count - size + i) {
+                    indices[i]++;
+                    for (int j = i + 1; j < size; j++) {
+                        indices[j] = indices[j - 1] + 1;
+                    }
+                    break;
+                }
+            }
+            
+            if (i < 0) break;
+        }
+        
+        ck_free(indices);
+    }
+    
+    kv_destroy(messages);
+    return result;
+}
+
+// 写入新种子
+void write_new_seeds(char *enriched_file, char *contents) {
+    if (!enriched_file || !contents) {
+        return;
+    }
+    
+    FILE *f = fopen(enriched_file, "w");
+    if (!f) {
+        perror("Failed to open file for writing");
+        return;
+    }
+    
+    size_t len = strlen(contents);
+    if (fwrite(contents, 1, len, f) != len) {
+        perror("Failed to write to file");
+    }
+    
+    fclose(f);
+}
+
+// 反转义字符串
+char *unescape_string(const char *input) {
+    if (!input) return NULL;
+    
+    size_t len = strlen(input);
+    char *result = (char*)ck_alloc(len + 1);
+    if (!result) return NULL;
+    
+    size_t i, j = 0;
+    for (i = 0; i < len; i++) {
+        if (input[i] == '\\' && i + 1 < len) {
+            switch (input[i + 1]) {
+                case 'n':
+                    result[j++] = '\n';
+                    i++;
+                    break;
+                case 'r':
+                    result[j++] = '\r';
+                    i++;
+                    break;
+                case 't':
+                    result[j++] = '\t';
+                    i++;
+                    break;
+                case '\\':
+                    result[j++] = '\\';
+                    i++;
+                    break;
+                case '"':
+                    result[j++] = '"';
+                    i++;
+                    break;
+                case ''':
+                    result[j++] = ''';
+                    i++;
+                    break;
+                default:
+                    result[j++] = input[i];
+                    break;
+            }
+        } else {
+            result[j++] = input[i];
+        }
+    }
+    
+    result[j] = '\0';
+    return result;
+}
+
+// 格式化字符串
+char *format_string(char *state_string) {
+    if (!state_string) return NULL;
+    
+    size_t len = strlen(state_string);
+    if (len == 0) return strdup("");
+    
+    // 简单的格式化：移除多余的空白字符
+    char *result = (char*)ck_alloc(len + 1);
+    if (!result) return NULL;
+    
+    size_t i, j = 0;
+    int in_whitespace = 0;
+    
+    for (i = 0; i < len; i++) {
+        if (isspace(state_string[i])) {
+            if (!in_whitespace) {
+                result[j++] = ' ';
+                in_whitespace = 1;
+            }
+        } else {
+            result[j++] = state_string[i];
+            in_whitespace = 0;
+        }
+    }
+    
+    // 移除末尾可能存在的空格
+    if (j > 0 && result[j - 1] == ' ') {
+        j--;
+    }
+    
+    result[j] = '\0';
+    return result;
 }
 
 char *construct_prompt_for_protocol_message_types(char *protocol_name)
