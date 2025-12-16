@@ -435,12 +435,6 @@ void setup_llm_grammars()
 {
 
   ACTF("Getting grammars from LLM...");
-  
-  // 创建协议语法目录
-  char *grammar_dir = alloc_printf("%s/protocol-grammars", out_dir);
-  mkdir(grammar_dir, 0700);
-  ck_free(grammar_dir);
-  
   ACTF("Starting protocol grammar extraction for %s", protocol_name);
 
   khash_t(consistency_table) *const_table = kh_init(consistency_table);
@@ -2641,11 +2635,6 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
   
   // 添加日志：记录种子增强开始
   ACTF("Starting seed enrichment for %d message types", kh_size(message_types_set));
-  
-  // 创建种子增强目录
-  char *enrich_dir = alloc_printf("%s/enhanced-seeds", out_dir);
-  mkdir(enrich_dir, 0700);
-  ck_free(enrich_dir);
 
   // traverse the directory to read the files
   for (int i = 0; i < nl_cnt; i++)
@@ -6867,11 +6856,6 @@ AFLNET_REGIONS_SELECTION:;
     // 添加日志：记录状态停滞处理
     ACTF("Fuzzing stalled after %d uninteresting attempts, calling LLM for guidance (attempt %d/%d)", 
          UNINTERESTING_THRESHOLD, chat_times + 1, CHATTING_THRESHOLD);
-    
-    // 创建停滞交互目录
-    char *stall_dir = alloc_printf("%s/stall-interactions", out_dir);
-    mkdir(stall_dir, 0700);
-    ck_free(stall_dir);
     u32 *response_bytes_temp = NULL;
     u32 buffer_len = 0;
 
