@@ -66,9 +66,21 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     char *auth_header;
     // 检查是否使用智谱AI模型
     if (strcmp(model, "glm-4.5-flash") == 0 || strcmp(model, "glm-4") == 0 || strcmp(model, "glm-3-turbo") == 0) {
-        auth_header = "Authorization: Bearer " ZHIPU_TOKEN;
+        // 智谱AI的token需要从环境变量获取
+        char *zhipu_token = getenv("ZHIPU_TOKEN");
+        if (!zhipu_token) {
+            printf("Error: ZHIPU_TOKEN environment variable not set\n");
+            return NULL;
+        }
+        asprintf(&auth_header, "Authorization: Bearer %s", zhipu_token);
     } else {
-        auth_header = "Authorization: Bearer " OPENAI_TOKEN;
+        // OpenAI的token需要从环境变量获取
+        char *openai_token = getenv("OPENAI_TOKEN");
+        if (!openai_token) {
+            printf("Error: OPENAI_TOKEN environment variable not set\n");
+            return NULL;
+        }
+        asprintf(&auth_header, "Authorization: Bearer %s", openai_token);
     }
     char *content_header = "Content-Type: application/json";
     char *accept_header = "Accept: application/json";
