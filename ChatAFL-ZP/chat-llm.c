@@ -159,7 +159,7 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 
     char *final_prompt = NULL;
 
-    asprintf(&final_prompt, "[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "%s"}]", prompt);
+    asprintf(&final_prompt, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", prompt);
 
     free(prompt);
 
@@ -190,7 +190,7 @@ char *construct_prompt_for_templates(char *protocol_name, char **final_msg)
      **/
     char *prompt_grammars = NULL;
 
-    asprintf(&prompt_grammars, "[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "%s"}]", msg);
+    asprintf(&prompt_grammars, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", msg);
 
     return prompt_grammars;
 }
@@ -207,10 +207,10 @@ char *construct_prompt_for_remaining_templates(char *protocol_name, char *first_
 
     asprintf(&prompt,
              "["
-             "{"role": "system", "content": "You are a helpful assistant."},"
-             "{"role": "user", "content": "%s"},"
-             "{"role": "assistant", "content": %s },"
-             "{"role": "user", "content": "%s"}"
+             "{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}," 
+             "{\"role\": \"user\", \"content\": \"%s\"}," 
+             "{\"role\": \"assistant\", \"content\": %s },"
+             "{\"role\": \"user\", \"content\": \"%s\"}"
              "]",
              first_question, answer_str_escaped, second_question);
 
