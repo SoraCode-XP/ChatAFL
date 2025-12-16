@@ -12,7 +12,6 @@ We give at most 400 for the examples and 1300 for the stall prompt
 Similarly 1700 is for the example request in the seed enrichment
 */
 
-#define OPENAI_TOKEN ""
 #define ZHIPU_TOKEN ""  // 智谱AI的API密钥，将通过setup.sh脚本设置
 
 #define MAX_PROMPT_LENGTH 2048

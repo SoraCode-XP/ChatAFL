@@ -55,44 +55,22 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     ACTF("Calling LLM model: %s with temperature: %.1f", model, temperature);
     ACTF("Prompt length: %d characters", (int)strlen(prompt));
 
-    // 检查是否使用智谱AI模型
-    if (strcmp(model, "glm-4.5-flash") == 0 || strcmp(model, "glm-4") == 0 || strcmp(model, "glm-3-turbo") == 0) {
-        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-    } else if (strcmp(model, "instruct") == 0) {
-        url = "https://api.openai.com/v1/completions";
-    } else {
-        url = "https://api.openai.com/v1/chat/completions";
-    }
+    // 统一使用智谱AI的API
+    url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
     char *auth_header;
-    // 检查是否使用智谱AI模型
-    if (strcmp(model, "glm-4.5-flash") == 0 || strcmp(model, "glm-4") == 0 || strcmp(model, "glm-3-turbo") == 0) {
-        // 智谱AI的token需要从环境变量获取
-        char *zhipu_token = getenv("ZHIPU_TOKEN");
-        if (!zhipu_token) {
-            printf("Error: ZHIPU_TOKEN environment variable not set\n");
-            return NULL;
-        }
-        asprintf(&auth_header, "Authorization: Bearer %s", zhipu_token);
-    } else {
-        // OpenAI的token需要从环境变量获取
-        char *openai_token = getenv("OPENAI_TOKEN");
-        if (!openai_token) {
-            printf("Error: OPENAI_TOKEN environment variable not set\n");
-            return NULL;
-        }
-        asprintf(&auth_header, "Authorization: Bearer %s", openai_token);
+    // 智谱AI的token需要从环境变量获取
+    char *zhipu_token = getenv("ZHIPU_TOKEN");
+    if (!zhipu_token) {
+        printf("Error: ZHIPU_TOKEN environment variable not set\n");
+        return NULL;
     }
+    asprintf(&auth_header, "Authorization: Bearer %s", zhipu_token);
     char *content_header = "Content-Type: application/json";
     char *accept_header = "Accept: application/json";
+    char *user_header = "User-Agent: ChatAFL/1.0";
     char *data = NULL;
-    if (strcmp(model, "instruct") == 0)
-    {
-        asprintf(&data, "{\"model\": \"gpt-3.5-turbo-instruct\", \"prompt\": \"%s\", \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
-    }
-    else
-    {
-        asprintf(&data, "{\"model\": \"gpt-3.5-turbo\",\"messages\": %s, \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
-    }
+    // 统一使用智谱AI的glm-4.5-flash模型
+    asprintf(&data, "{\"model\": \"glm-4.5-flash\", \"messages\": %s, \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
     curl_global_init(CURL_GLOBAL_DEFAULT);
     do
     {
@@ -108,6 +86,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
             headers = curl_slist_append(headers, auth_header);
             headers = curl_slist_append(headers, content_header);
             headers = curl_slist_append(headers, accept_header);
+            headers = curl_slist_append(headers, user_header);
 
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
@@ -121,36 +100,52 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
             {
                 json_object *jobj = json_tokener_parse(chunk.memory);
 
-                // Check if the "choices" key exists
+                // 检查智谱AI API的错误响应
+                if (json_object_object_get_ex(jobj, "error", NULL))
+                {
+                    json_object *error_obj = json_object_object_get(jobj, "error");
+                    json_object *message_obj = json_object_object_get(error_obj, "message");
+                    const char *error_msg = json_object_get_string(message_obj);
+                    printf("智谱AI API错误: %s\n", error_msg ? error_msg : "未知错误");
+                    sleep(2); // 等待一段时间以便服务恢复
+                }
+                // 检查"choices"键是否存在
                 if (json_object_object_get_ex(jobj, "choices", NULL))
                 {
                     json_object *choices = json_object_object_get(jobj, "choices");
-                    json_object *first_choice = json_object_array_get_idx(choices, 0);
-                    const char *data;
-
-                    // The answer begins with a newline character, so we remove it
-                    if (strcmp(model, "instruct") == 0)
+                    if (json_object_array_length(choices) > 0)
                     {
-                        json_object *jobj4 = json_object_object_get(first_choice, "text");
-                        data = json_object_get_string(jobj4);
+                        json_object *first_choice = json_object_array_get_idx(choices, 0);
+                        const char *data;
+
+                        // 使用智谱AI的响应格式
+                        json_object *jobj4 = json_object_object_get(first_choice, "message");
+                        if (jobj4 && json_object_object_get_ex(jobj4, "content", NULL))
+                        {
+                            json_object *jobj5 = json_object_object_get(jobj4, "content");
+                            data = json_object_get_string(jobj5);
+                            if (data && data[0] == '\n')
+                                data++;
+                            if (data)
+                                answer = strdup(data);
+                    
+                            // 添加日志：记录大模型调用成功
+                            ACTF("LLM call successful. Response length: %d characters", (int)strlen(answer));
+                        }
+                        else
+                        {
+                            printf("智谱AI API响应格式错误: 缺少content字段\n");
+                        }
                     }
                     else
                     {
-                        json_object *jobj4 = json_object_object_get(first_choice, "message");
-                        json_object *jobj5 = json_object_object_get(jobj4, "content");
-                        data = json_object_get_string(jobj5);
+                        printf("智谱AI API响应格式错误: choices数组为空\n");
                     }
-                    if (data[0] == '\n')
-                        data++;
-                    answer = strdup(data);
-                    
-                    // 添加日志：记录大模型调用成功
-                    ACTF("LLM call successful. Response length: %d characters", (int)strlen(answer));
                 }
                 else
                 {
-                    printf("Error response is: %s\n", chunk.memory);
-                    sleep(2); // Sleep for a small amount of time to ensure that the service can recover
+                    printf("智谱AI API未知响应格式: %s\n", chunk.memory);
+                    sleep(2); // 等待一段时间以便服务恢复
                 }
                 json_object_put(jobj);
             }
