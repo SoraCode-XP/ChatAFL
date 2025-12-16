@@ -58,10 +58,10 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     // 统一使用智谱AI的API
     url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
     char *auth_header;
-    // 智谱AI的token需要从环境变量获取
-    char *zhipu_token = getenv("ZHIPU_TOKEN");
-    if (!zhipu_token) {
-        printf("Error: ZHIPU_TOKEN environment variable not set\n");
+    // 使用头文件中定义的ZHIPU_TOKEN宏
+    const char *zhipu_token = ZHIPU_TOKEN;
+    if (strlen(zhipu_token) == 0) {
+        printf("Error: ZHIPU_TOKEN is not set in chat-llm.h\n");
         return NULL;
     }
     asprintf(&auth_header, "Authorization: Bearer %s", zhipu_token);
