@@ -170,15 +170,14 @@ char *construct_prompt_for_templates(char *protocol_name, char **final_msg)
 {
     // Give one example for learning formats
     char *prompt_rtsp_example = "For the RTSP protocol, the DESCRIBE client request template is:\\n"
-                                "DESCRIBE: [\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\","
-                                "\\"CSeq: <<VALUE>>\\\\r\\\\n\\","
-                                "\\"User-Agent: <<VALUE>>\\\\r\\\\n\\","
-                                "\\"Accept: <<VALUE>>\\\\r\\\\n\\","
-                                "\\"\\\\r\\\\n\\"]";
+                                "DESCRIBE: [\\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\\","
+                                "\\\"CSeq: <<VALUE>>\\\\r\\\\n\\\","
+                                "\\\"User-Agent: <<VALUE>>\\\\r\\\\n\\\","
+                                "\\\"Accept: <<VALUE>>\\\\r\\\\n\\\","
+                                "\\\"\\\\r\\\\n\\\"]";
 
     char *prompt_http_example = "For the HTTP protocol, the GET client request template is:\\n"
-                                "GET: [\\"GET <<VALUE>>\\\\r\\\\n\\"]";
-
+                                "GET: [\\\"GET <<VALUE>>\\\\r\\\\n\\\"]";
     char *msg = NULL;
     asprintf(&msg, "%s\\n%s\\nFor the %s protocol, all of client request templates are :", prompt_rtsp_example, prompt_http_example, protocol_name);
     *final_msg = msg;
