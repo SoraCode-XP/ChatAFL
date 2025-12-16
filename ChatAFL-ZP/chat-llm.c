@@ -152,7 +152,7 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
 {
     char *template = "In the %s protocol, the communication history between the %s client and the %s server is as follows."
                      "The next proper client request that can affect the server's state are:\\n\\n"
-                     "Desired format of real client requests:\\n%sCommunication History:\\\\"\\\"\\\"\\n%s\\\"\\\"\\\"";
+                     "Desired format of real client requests:\\n%sCommunication History:\\n\\\"\\\"\\\"\\n%s\\\"\\\"\\\"";
 
     char *prompt = NULL;
     asprintf(&prompt, template, protocol_name, protocol_name, protocol_name, examples, history);
@@ -170,14 +170,15 @@ char *construct_prompt_for_templates(char *protocol_name, char **final_msg)
 {
     // Give one example for learning formats
     char *prompt_rtsp_example = "For the RTSP protocol, the DESCRIBE client request template is:\\n"
-                                "DESCRIBE: [\\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"CSeq: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"User-Agent: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"Accept: <<VALUE>>\\\\r\\\\n\\\","
-                                "\\\"\\\\r\\\\n\\\"]";
+                                "DESCRIBE: [\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\","
+                                "\\"CSeq: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"User-Agent: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"Accept: <<VALUE>>\\\\r\\\\n\\","
+                                "\\"\\\\r\\\\n\\"]";
 
     char *prompt_http_example = "For the HTTP protocol, the GET client request template is:\\n"
-                                "GET: [\\\"GET <<VALUE>>\\\\r\\\\n\\\"]";
+                                "GET: [\\"GET <<VALUE>>\\\\r\\\\n\\"]";
+
     char *msg = NULL;
     asprintf(&msg, "%s\\n%s\\nFor the %s protocol, all of client request templates are :", prompt_rtsp_example, prompt_http_example, protocol_name);
     *final_msg = msg;
