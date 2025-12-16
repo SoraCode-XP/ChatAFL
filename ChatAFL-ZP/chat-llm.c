@@ -71,7 +71,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     char *accept_header = "Accept: application/json";
     char *data = NULL;
     // 统一使用glm-4.5-flash模型
-    asprintf(&data, "{"model": "glm-4.5-flash","messages": %s, "max_tokens": %d, "temperature": %f}", prompt, MAX_TOKENS, temperature);
+    asprintf(&data, "{\"model\": \"glm-4.5-flash\",\"messages\": %s, \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     do
