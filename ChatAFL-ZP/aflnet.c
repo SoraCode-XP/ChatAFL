@@ -2072,11 +2072,11 @@ int parse_net_config(u8 *net_config, u8 *protocol, u8 **ip_address, u32 *port)
 
   tokens = (char **)malloc(sizeof(char *) * (tokenCount));
 
-  if (strlen(net_config) > 80)
+  if (strlen(net_config) >= 80)
     return 1;
 
-  strncpy(buf, net_config, strlen(net_config));
-  buf[strlen(net_config)] = '\0';  // 确保字符串以 null 结尾
+  strncpy(buf, net_config, 80);
+  buf[79] = '\0';  // 确保字符串以 null 结尾
   str_rtrim(buf);
 
   if (!str_split(buf, "/", tokens, tokenCount))

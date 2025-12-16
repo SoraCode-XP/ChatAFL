@@ -10,6 +10,9 @@
 #include "alloc-inl.h"
 #include "hash.h"
 
+// 声明外部变量 out_dir
+extern u8 *out_dir;
+
 // -lcurl -ljson-c -lpcre2-8
 // apt install libcurl4-openssl-dev libjson-c-dev libpcre2-dev libpcre2-8-0
 
@@ -52,9 +55,6 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     // 添加日志：记录大模型调用开始
     ACTF("Calling LLM model: %s with temperature: %.1f", model, temperature);
     ACTF("Prompt length: %d characters", (int)strlen(prompt));
-    
-    // 声明外部变量 out_dir
-    extern u8 *out_dir;
     
     // 保存提示词到文件以便调试
     char *prompt_log_file = alloc_printf("%s/llm_prompts/prompt_%ld.txt", out_dir, time(NULL));
@@ -937,7 +937,7 @@ void make_combination(khash_t(strSet)* sequence, char** data , message_set_list*
     {
         if(!kh_exist(sequence,i))
             continue;
-        data[index] = kh_key(sequence,i);
+        data[index] = (char*)kh_key(sequence,i);
         make_combination(sequence, data,res, i+1, end, index+1, size);
     }
 }
