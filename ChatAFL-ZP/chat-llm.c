@@ -18,6 +18,69 @@
 #define MAX_TOKENS 2048
 #define CONFIDENT_TIMES 3
 
+// JSON转义函数
+char *json_escape_string(const char *input) {
+    if (!input) return strdup("");
+    
+    size_t len = strlen(input);
+    char *escaped = malloc(len * 2 + 3); // 最坏情况下每个字符都需要转义，加上引号和结束符
+    if (!escaped) return NULL;
+    
+    size_t j = 0;
+    escaped[j++] = '"';
+    
+    for (size_t i = 0; i < len; i++) {
+        switch (input[i]) {
+            case '\"':
+                escaped[j++] = '\\';
+                escaped[j++] = '"';
+                break;
+            case '\\':
+                escaped[j++] = '\\';
+                escaped[j++] = '\\';
+                break;
+            case '\b':
+                escaped[j++] = '\\';
+                escaped[j++] = 'b';
+                break;
+            case '\f':
+                escaped[j++] = '\\';
+                escaped[j++] = 'f';
+                break;
+            case '\n':
+                escaped[j++] = '\\';
+                escaped[j++] = 'n';
+                break;
+            case '\r':
+                escaped[j++] = '\\';
+                escaped[j++] = 'r';
+                break;
+            case '\t':
+                escaped[j++] = '\\';
+                escaped[j++] = 't';
+                break;
+            default:
+                if ((unsigned char)input[i] < 0x20) {
+                    // 控制字符转为\uXXXX格式
+                    escaped[j++] = '\\';
+                    escaped[j++] = 'u';
+                    escaped[j++] = '0';
+                    escaped[j++] = '0';
+                    escaped[j++] = "0123456789ABCDEF"[((unsigned char)input[i] >> 4) & 0xF];
+                    escaped[j++] = "0123456789ABCDEF"[((unsigned char)input[i]) & 0xF];
+                } else {
+                    escaped[j++] = input[i];
+                }
+                break;
+        }
+    }
+    
+    escaped[j++] = '"';
+    escaped[j] = '\0';
+    
+    return escaped;
+}
+
 struct MemoryStruct
 {
     char *memory;
