@@ -113,7 +113,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                 if (json_object_object_get_ex(jobj, "choices", NULL))
                 {
                     json_object *choices = json_object_object_get(jobj, "choices");
-                    if (json_object_array_length(choices) > 0)
+                    if (json_object_get_type(choices) == json_type_array && json_object_array_length(choices) > 0)
                     {
                         json_object *first_choice = json_object_array_get_idx(choices, 0);
                         const char *data;
@@ -145,6 +145,11 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                 else
                 {
                     printf("智谱AI API未知响应格式: %s\n", chunk.memory);
+                    // 添加调试信息，打印响应类型
+                    json_object *obj_type;
+                    if (json_object_object_get_ex(jobj, "choices", &obj_type)) {
+                        printf("choices类型: %s\n", json_type_to_name(json_object_get_type(obj_type)));
+                    }
                     sleep(2); // 等待一段时间以便服务恢复
                 }
                 json_object_put(jobj);
