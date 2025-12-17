@@ -189,11 +189,20 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                             data = json_object_get_string(jobj5);
                             if (data && data[0] == '\n')
                                 data++;
-                            if (data)
+                            if (data && strlen(data) > 0) {
                                 answer = strdup(data);
+                            } else {
+                                printf("警告: 智谱AI返回了空响应\n");
+                                // 设置一个默认错误响应
+                                answer = strdup("错误: 智谱AI返回了空响应");
+                            }
                     
-                            // 添加日志：记录大模型调用成功
-                            ACTF("LLM call successful. Response length: %d characters", (int)strlen(answer));
+                            // 添加日志：记录大模型调用结果
+                            if (strlen(answer) > 0) {
+                                ACTF("LLM call successful. Response length: %d characters", (int)strlen(answer));
+                            } else {
+                                ACTF("LLM call returned empty response");
+                            }
                         }
                         else
                         {
