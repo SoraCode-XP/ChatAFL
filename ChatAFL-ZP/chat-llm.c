@@ -802,7 +802,7 @@ void get_protocol_message_types(char *state_prompt, khash_t(strSet) * states_set
 
     for (int i = 0; i < CONFIDENT_TIMES; i++)
     {
-        char *state_answer = chat_with_llm(state_prompt, "instruct", MESSAGE_TYPE_RETRIES, 0.5);
+        char *state_answer = chat_with_llm(state_prompt, "glm-4.5-flash", MESSAGE_TYPE_RETRIES, 0.5);
         if (state_answer == NULL)
             continue;
         // printf("## Answer from LLM:\n %s\n", state_answer);
@@ -991,7 +991,7 @@ char *enrich_sequence(char *sequence, khash_t(strSet) * missing_message_types)
     ck_free(missing_fields_seq);
     json_object_put(sequence_escaped);
 
-    char *response = chat_with_llm(prompt, "instruct", ENRICHMENT_RETRIES, 0.5);
+    char *response = chat_with_llm(prompt, "glm-4.5-flash", ENRICHMENT_RETRIES, 0.5);
 
     free(prompt);
 
