@@ -161,22 +161,50 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 
             if (res == CURLE_OK)
             {
+                // 检查响应是否为空
+                if (chunk.size == 0 || !chunk.memory || chunk.memory[0] == '\0') {
+                    printf("警告: 智谱AI返回了空响应\n");
+                    answer = strdup("错误: 智谱AI返回了空响应");
+                    continue;
+                }
+                
                 json_object *jobj = json_tokener_parse(chunk.memory);
+                if (!jobj) {
+                    printf("错误: 无法解析智谱AI响应为JSON: %s\n", chunk.memory);
+                    continue;
+                }
 
+                // 打印原始响应以便调试
+                printf("智谱AI原始响应: %s\n", chunk.memory);
+                
                 // 检查智谱AI API的错误响应
-                if (json_object_object_get_ex(jobj, "error", NULL))
+                json_object *error_obj = NULL;
+                if (json_object_object_get_ex(jobj, "error", &error_obj))
                 {
-                    json_object *error_obj = json_object_object_get(jobj, "error");
                     json_object *message_obj = json_object_object_get(error_obj, "message");
                     const char *error_msg = json_object_get_string(message_obj);
                     printf("智谱AI API错误: %s\n", error_msg ? error_msg : "未知错误");
                     sleep(2); // 等待一段时间以便服务恢复
                 }
                 // 检查"choices"键是否存在
-                if (json_object_object_get_ex(jobj, "choices", NULL))
+                json_object *choices = NULL;
+                if (json_object_object_get_ex(jobj, "choices", &choices))
                 {
-                    json_object *choices = json_object_object_get(jobj, "choices");
-                    if (json_object_get_type(choices) == json_type_array && json_object_array_length(choices) > 0)
+                    // 确保choices是数组类型
+                    if (json_object_get_type(choices) != json_type_array) {
+                        printf("智谱AI API响应格式错误: choices不是数组类型，当前类型: %s\n", 
+                               json_type_to_name(json_object_get_type(choices)));
+                        
+                        // 尝试将其他类型转换为数组
+                        if (json_object_get_type(choices) == json_type_string) {
+                            const char *str = json_object_get_string(choices);
+                            printf("尝试将字符串转换为数组: %s\n", str);
+                            // 这里可以添加字符串解析逻辑
+                        }
+                        
+                        // 设置默认响应并继续
+                        answer = strdup("错误: 智谱AI API返回格式不正确");
+                    } else if (json_object_array_length(choices) > 0)
                     {
                         json_object *first_choice = json_object_array_get_idx(choices, 0);
                         const char *data;
