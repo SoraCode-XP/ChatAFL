@@ -616,6 +616,53 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
                     ck_free(fixed_temp);
                 }
             }
+            // 检查是否是裸露标识符的情况（如[MethodLine, Headers, CRLF]）
+            else if (temp[0] == '[' && temp[strlen(temp)-1] == ']') {
+                printf("尝试修复裸露标识符的JSON数组\n");
+                
+                // 创建一个新的字符串，用于构建有效的JSON数组
+                char *json_str = (char *)ck_alloc(strlen(temp) * 2 + 10); // 预留足够空间
+                strcpy(json_str, "[");
+                
+                // 解析原始数组内容
+                char *content = (char *)ck_alloc(strlen(temp) - 1);
+                strncpy(content, temp + 1, strlen(temp) - 2);
+                content[strlen(temp) - 2] = '\0';
+                
+                // 分割并处理每个元素
+                char *token = strtok(content, ", ");
+                int first = 1;
+                
+                while (token != NULL) {
+                    if (!first) {
+                        strcat(json_str, ", ");
+                    }
+                    first = 0;
+                    
+                    // 为每个标识符添加引号
+                    strcat(json_str, "\"");
+                    strcat(json_str, token);
+                    strcat(json_str, "\"");
+                    
+                    token = strtok(NULL, ", ");
+                }
+                
+                strcat(json_str, "]");
+                ck_free(content);
+                
+                printf("修复后的JSON: %s\n", json_str);
+                
+                // 尝试解析修复后的JSON
+                json_object *fixed_obj = json_tokener_parse(json_str);
+                if (fixed_obj) {
+                    printf("修复裸露标识符后成功解析语法\n");
+                    *kl_pushp(gram, grammar_list) = fixed_obj;
+                } else {
+                    printf("修复裸露标识符后仍然无法解析\n");
+                }
+                
+                ck_free(json_str);
+            }
         }
         ck_free(temp);
     }
