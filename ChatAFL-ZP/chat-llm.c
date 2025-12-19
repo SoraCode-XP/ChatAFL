@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <json-c/json.h>
 
+#include <pthread.h>
+
 #include "chat-llm.h"
 #include "alloc-inl.h"
 #include "hash.h"
@@ -17,6 +19,32 @@
 
 #define MAX_TOKENS 2048 * 16
 #define CONFIDENT_TIMES 3
+
+// 全局变量用于跟踪当前API调用数量
+static int active_api_calls = 0;
+// 互斥锁用于保护active_api_calls变量
+static pthread_mutex_t api_call_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// 等待直到可以开始新的API调用
+static void wait_for_api_call_slot() {
+    while (1) {
+        pthread_mutex_lock(&api_call_mutex);
+        if (active_api_calls < MAX_ZHIPU_CONCURRENT_CALLS) {
+            active_api_calls++;
+            pthread_mutex_unlock(&api_call_mutex);
+            break;
+        }
+        pthread_mutex_unlock(&api_call_mutex);
+        sleep(1); // 等待1秒后重试
+    }
+}
+
+// 释放API调用槽位
+static void release_api_call_slot() {
+    pthread_mutex_lock(&api_call_mutex);
+    active_api_calls--;
+    pthread_mutex_unlock(&api_call_mutex);
+}
 
 struct MemoryStruct
 {
@@ -57,9 +85,15 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     int retry_count = 0;
     int length_truncated = 0;  // 标记是否因长度限制被截断
 
+    // 等待可用的API调用槽位
+    wait_for_api_call_slot();
+
     // 添加日志：记录大模型调用开始
     ACTF("Calling LLM model: %s with temperature: %.1f", model, temperature);
     ACTF("Prompt length: %d characters", (int)strlen(prompt));
+
+    // 添加变量用于跟踪速率限制
+    int rate_limited = 0;
 
     // 统一使用智谱AI的API
     url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
@@ -180,7 +214,14 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                     json_object *message_obj = json_object_object_get(error_obj, "message");
                     const char *error_msg = json_object_get_string(message_obj);
                     printf("智谱AI API错误: %s\n", error_msg ? error_msg : "未知错误");
-                    sleep(2); // 等待一段时间以便服务恢复
+
+                    // 检查是否是并发限制错误
+                    if (error_msg && strstr(error_msg, "1302") != NULL) {
+                        printf("检测到并发限制错误，将等待更长时间后重试\n");
+                        sleep(ZHIPU_RATE_LIMIT_DELAY); // 使用配置的延迟时间
+                    } else {
+                        sleep(2); // 等待一段时间以便服务恢复
+                    }
                 }
                 // 检查"choices"键是否存在
                 json_object *choices = NULL;
@@ -329,6 +370,9 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     {
         free(data);
     }
+
+    // 释放API调用槽位
+    release_api_call_slot();
 
     curl_global_cleanup();
     return answer;
