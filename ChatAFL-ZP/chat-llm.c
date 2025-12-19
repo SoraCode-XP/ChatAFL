@@ -104,7 +104,43 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                 // 检查响应是否为空
                 if (chunk.size == 0 || !chunk.memory || chunk.memory[0] == '\0') {
                     printf("警告: 智谱AI返回了空响应\n");
-                    answer = strdup("错误: 智谱AI返回了空响应");
+                    printf("详细信息: 响应大小=%zu, 内存指针=%p, 首字符=0x%02X\n", 
+                           chunk.size, (void*)chunk.memory, 
+                           chunk.memory ? (unsigned char)chunk.memory[0] : 0);
+                    
+                    // 尝试解析原始响应，看是否有结构信息
+                    json_object *jobj = json_tokener_parse(chunk.memory);
+                    if (jobj) {
+                        json_object *choices = NULL;
+                        if (json_object_object_get_ex(jobj, "choices", &choices) && 
+                            json_object_get_type(choices) == json_type_array && 
+                            json_object_array_length(choices) > 0) {
+                            json_object *first_choice = json_object_array_get_idx(choices, 0);
+                            json_object *finish_reason_obj = NULL;
+                            if (json_object_object_get_ex(first_choice, "finish_reason", &finish_reason_obj)) {
+                                const char *finish_reason = json_object_get_string(finish_reason_obj);
+                                printf("响应完成原因: %s\n", finish_reason);
+                                
+                                if (strcmp(finish_reason, "length") == 0) {
+                                    printf("可能原因: 响应因达到最大长度限制而被截断\n");
+                                    answer = strdup("错误: 智谱AI响应因长度限制被截断且内容为空");
+                                } else if (strcmp(finish_reason, "content_filter") == 0) {
+                                    printf("可能原因: 响应因内容过滤被终止\n");
+                                    answer = strdup("错误: 智谱AI响应因内容过滤被终止");
+                                } else {
+                                    printf("可能原因: 响应完成但内容为空，完成原因: %s\n", finish_reason);
+                                    answer = strdup("错误: 智谱AI返回了空响应");
+                                }
+                            } else {
+                                answer = strdup("错误: 智谱AI返回了空响应且无完成原因");
+                            }
+                        } else {
+                            answer = strdup("错误: 智谱AI返回了空响应且无有效选择项");
+                        }
+                        json_object_put(jobj);
+                    } else {
+                        answer = strdup("错误: 智谱AI返回了空响应且无法解析JSON");
+                    }
                     continue;
                 }
 
@@ -163,6 +199,19 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                         json_object *first_choice = json_object_array_get_idx(choices, 0);
                         const char *data;
 
+                        // 检查finish_reason字段，了解响应结束的原因
+                        json_object *finish_reason_obj = NULL;
+                        const char *finish_reason = "unknown";
+                        if (json_object_object_get_ex(first_choice, "finish_reason", &finish_reason_obj)) {
+                            finish_reason = json_object_get_string(finish_reason_obj);
+                            printf("智谱AI响应完成原因: %s\n", finish_reason);
+                            
+                            // 如果是因为长度限制而截断，记录警告
+                            if (strcmp(finish_reason, "length") == 0) {
+                                printf("警告: 智谱AI响应因达到最大长度限制而被截断\n");
+                            }
+                        }
+
                         // 使用智谱AI的响应格式
                         json_object *jobj4 = json_object_object_get(first_choice, "message");
                         if (jobj4 && json_object_object_get_ex(jobj4, "content", NULL))
@@ -175,8 +224,21 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                                 answer = strdup(data);
                             } else {
                                 printf("警告: 智谱AI返回了空响应\n");
-                                // 设置一个默认错误响应
-                                answer = strdup("错误: 智谱AI返回了空响应");
+                                
+                                // 根据finish_reason提供更详细的错误信息
+                                if (strcmp(finish_reason, "length") == 0) {
+                                    printf("详细原因: 响应因达到最大长度限制而被截断，但内容字段为空\n");
+                                    answer = strdup("错误: 智谱AI响应因长度限制被截断且内容为空");
+                                } else if (strcmp(finish_reason, "content_filter") == 0) {
+                                    printf("详细原因: 响应因内容过滤被终止\n");
+                                    answer = strdup("错误: 智谱AI响应因内容过滤被终止");
+                                } else if (strcmp(finish_reason, "stop") == 0) {
+                                    printf("详细原因: 响应正常结束但内容为空\n");
+                                    answer = strdup("错误: 智谱AI响应正常结束但内容为空");
+                                } else {
+                                    printf("详细原因: 未知的响应完成原因: %s\n", finish_reason);
+                                    answer = strdup("错误: 智谱AI返回了空响应");
+                                }
                             }
 
                             // 添加日志：记录大模型调用结果
