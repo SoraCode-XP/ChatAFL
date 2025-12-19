@@ -15,7 +15,7 @@
 // -lcurl -ljson-c -lpcre2-8
 // apt install libcurl4-openssl-dev libjson-c-dev libpcre2-dev libpcre2-8-0
 
-#define MAX_TOKENS 24576
+#define MAX_TOKENS 2048 * 16
 #define CONFIDENT_TIMES 3
 
 struct MemoryStruct
@@ -52,7 +52,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     char *url = NULL;
     
     // 添加变量用于动态调整max_tokens
-    int current_max_tokens = 4096;  // 初始值较小，逐步增加
+    int current_max_tokens = 24576;  // 初始值较小，逐步增加
     int max_token_limit = MAX_TOKENS;  // 最大不超过定义的MAX_TOKENS
     int retry_count = 0;
     int length_truncated = 0;  // 标记是否因长度限制被截断
@@ -593,6 +593,29 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
         else
         {
             printf("Failed to parse grammar: %s\n", temp);
+            printf("语法解析失败详情: 长度=%zu, 是否以[开头=%s, 是否以]结尾=%s\n", 
+                   strlen(temp), 
+                   temp[0] == '[' ? "是" : "否",
+                   temp[strlen(temp)-1] == ']' ? "是" : "否");
+                   
+            // 检查是否可能是因长度限制被截断
+            if (strlen(temp) > 100 && temp[strlen(temp)-1] != ']') {
+                printf("警告: 语法可能因长度限制被截断，缺少结束括号\n");
+                // 尝试添加缺失的结束括号
+                char *fixed_temp = (char *)ck_alloc(strlen(temp) + 2);
+                strcpy(fixed_temp, temp);
+                strcat(fixed_temp, "]");
+                
+                json_object *fixed_obj = json_tokener_parse(fixed_temp);
+                if (fixed_obj) {
+                    printf("修复后成功解析语法\n");
+                    *kl_pushp(gram, grammar_list) = fixed_obj;
+                    ck_free(fixed_temp);
+                } else {
+                    printf("即使添加结束括号也无法解析\n");
+                    ck_free(fixed_temp);
+                }
+            }
         }
         ck_free(temp);
     }
