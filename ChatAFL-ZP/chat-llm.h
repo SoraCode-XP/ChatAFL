@@ -75,7 +75,7 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_set);
 char *extract_message_pattern(const char *header_str,
                                khash_t(field_table) * field_table,
                                pcre2_code **patterns,
-                               FILE *debug_file,
+                               int debug_fd,
                                const char *debug_file_name);
 char *extract_stalled_message(char *message, size_t message_len);
 char *format_request_message(char *message);

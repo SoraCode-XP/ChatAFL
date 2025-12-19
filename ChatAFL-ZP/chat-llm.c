@@ -492,7 +492,7 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
 char *extract_message_pattern(const char *header_str,
                                khash_t(field_table) * field_table,
                                pcre2_code **patterns,
-                               FILE *debug_file,
+                               int debug_fd,
                                const char *debug_file_name)
 {
     char *pattern = NULL;
@@ -578,20 +578,25 @@ char *extract_message_pattern(const char *header_str,
     patterns[1] = pcre2_compile(fields_pattern, PCRE2_ZERO_TERMINATED, 0, &errornumber, &erroroffset, NULL);
 
     // Debug output
-    if (debug_file)
+    if (debug_fd >= 0)
     {
-        fprintf(debug_file, "Header pattern: %s\n", pattern);
-        fprintf(debug_file, "Fields pattern: %s\n", fields_pattern);
-        fprintf(debug_file, "Field table: \n");
-        for (k = kh_begin(field_table); k != kh_end(field_table); ++k)
-        {
-            if (!kh_exist(field_table, k))
-                continue;
+        FILE *debug_file = fdopen(debug_fd, "a");
+        if (debug_file) {
+            fprintf(debug_file, "Header pattern: %s\n", pattern);
+            fprintf(debug_file, "Fields pattern: %s\n", fields_pattern);
+            fprintf(debug_file, "Field table: \n");
+            for (k = kh_begin(field_table); k != kh_end(field_table); ++k)
+            {
+                if (!kh_exist(field_table, k))
+                    continue;
 
-            const char *field_name = kh_key(field_table, k);
-            fprintf(debug_file, "  %s\n", field_name);
+                const char *field_name = kh_key(field_table, k);
+                fprintf(debug_file, "  %s\n", field_name);
+            }
+            fprintf(debug_file, "\n");
+            fflush(debug_file);
+            // Note: We don't close the file here as it was opened elsewhere
         }
-        fprintf(debug_file, "\n");
     }
 
     free(header_name);
