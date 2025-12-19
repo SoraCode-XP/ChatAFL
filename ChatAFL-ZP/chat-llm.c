@@ -6,8 +6,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <unistd.h>
-
-
+#include <json-c/json.h>
 
 #include "chat-llm.h"
 #include "alloc-inl.h"
@@ -926,11 +925,8 @@ message_set_list message_combinations(khash_t(strSet)* sequence, int size)
  */
 char* create_safe_json_string(const char* input) {
     if (!input) {
-        json_object* empty_obj = json_object_new_string("");
-        const char* empty_str = json_object_get_string(empty_obj);
-        char* result = strdup(empty_str);
-        json_object_put(empty_obj);
-        return result;
+        // 返回一个空字符串的副本
+        return strdup("");
     }
 
     // 使用json-c库的内置转义功能
