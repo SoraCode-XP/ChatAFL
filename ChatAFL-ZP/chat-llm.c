@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include <unistd.h>
 
+
+
 #include "chat-llm.h"
 #include "json_utils.h"
 #include "alloc-inl.h"
@@ -478,7 +480,7 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
         if (temp_obj)
         {
             // printf("Extracted grammar: %s\n", json_object_to_json_string(temp_obj));
-            kv_push(gram, grammar_list, temp_obj);
+            *kl_pushp(gram, grammar_list) = temp_obj;
         }
         else
         {
@@ -491,7 +493,7 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
 char *extract_message_pattern(const char *header_str,
                                khash_t(field_table) * field_table,
                                pcre2_code **patterns,
-                               int debug_file,
+                               FILE *debug_file,
                                const char *debug_file_name)
 {
     char *pattern = NULL;
@@ -714,7 +716,7 @@ char *enrich_sequence(char *sequence, khash_t(strSet) * missing_message_types)
     khiter_t k;
     int i = 0;
     for (k = kh_begin(missing_message_types);
-    k != kh_end(missing_message_types) && i < min(MAX_ENRICHMENT_MESSAGE_TYPES, kh_size(missing_message_types));
+    k != kh_end(missing_message_types) && i < MIN(MAX_ENRICHMENT_MESSAGE_TYPES, kh_size(missing_message_types));
     ++k)
     {
         if (!kh_exist(missing_message_types, k))
@@ -914,6 +916,4 @@ message_set_list message_combinations(khash_t(strSet)* sequence, int size)
     return result;
 }
 
-int min(int a, int b) {
-    return a < b ? a : b;
-}
+
