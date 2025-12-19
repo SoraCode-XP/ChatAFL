@@ -15,7 +15,7 @@
 // -lcurl -ljson-c -lpcre2-8
 // apt install libcurl4-openssl-dev libjson-c-dev libpcre2-dev libpcre2-8-0
 
-#define MAX_TOKENS 2048
+#define MAX_TOKENS 24576
 #define CONFIDENT_TIMES 3
 
 struct MemoryStruct
@@ -50,6 +50,12 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     CURLcode res = CURLE_OK;
     char *answer = NULL;
     char *url = NULL;
+    
+    // 添加变量用于动态调整max_tokens
+    int current_max_tokens = 4096;  // 初始值较小，逐步增加
+    int max_token_limit = MAX_TOKENS;  // 最大不超过定义的MAX_TOKENS
+    int retry_count = 0;
+    int length_truncated = 0;  // 标记是否因长度限制被截断
 
     // 添加日志：记录大模型调用开始
     ACTF("Calling LLM model: %s with temperature: %.1f", model, temperature);
@@ -70,8 +76,8 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     char *user_header = "User-Agent: ChatAFL/1.0";
     char *charset_header = "charset: utf-8";
 
-    // 使用优化的JSON构建函数
-    char *data = build_zhipu_request_string("glm-4.5-flash", prompt, MAX_TOKENS, temperature);
+    // 使用优化的JSON构建函数，初始使用较小的token数
+    char *data = build_zhipu_request_string("glm-4.5-flash", prompt, current_max_tokens, temperature);
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     do
@@ -209,6 +215,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                             // 如果是因为长度限制而截断，记录警告
                             if (strcmp(finish_reason, "length") == 0) {
                                 printf("警告: 智谱AI响应因达到最大长度限制而被截断\n");
+                                length_truncated = 1;
                             }
                         }
 
@@ -228,7 +235,8 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                                 // 根据finish_reason提供更详细的错误信息
                                 if (strcmp(finish_reason, "length") == 0) {
                                     printf("详细原因: 响应因达到最大长度限制而被截断，但内容字段为空\n");
-                                    answer = strdup("错误: 智谱AI响应因长度限制被截断且内容为空");
+                                    length_truncated = 1;
+                                    // 不设置answer，让循环继续并增加token限制
                                 } else if (strcmp(finish_reason, "content_filter") == 0) {
                                     printf("详细原因: 响应因内容过滤被终止\n");
                                     answer = strdup("错误: 智谱AI响应因内容过滤被终止");
@@ -277,9 +285,44 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 
             curl_slist_free_all(headers);
             curl_easy_cleanup(curl);
+            
+            // 如果因长度限制被截断且未达到最大token限制，增加token数并重试
+            if (length_truncated && current_max_tokens < max_token_limit) {
+                // 增加token限制
+                int increment = (max_token_limit - current_max_tokens) / 2;
+                if (increment < 512) increment = 512;  // 最小增加512
+                current_max_tokens += increment;
+                if (current_max_tokens > max_token_limit) current_max_tokens = max_token_limit;
+                
+                printf("增加token限制至 %d 并重试...\n", current_max_tokens);
+                
+                // 释放旧的请求数据
+                free(data);
+                
+                // 构建新的请求，使用更大的token限制
+                data = build_zhipu_request_string("glm-4.5-flash", prompt, current_max_tokens, temperature);
+                
+                // 重置标志
+                length_truncated = 0;
+                retry_count++;
+                
+                // 如果重试次数过多，跳出循环
+                if (retry_count >= 3) {
+                    printf("已达到最大重试次数，停止重试\n");
+                    answer = strdup("错误: 智谱AI响应因长度限制被截断且重试失败");
+                    break;
+                }
+                
+                continue;  // 继续下一次循环
+            }
         }
 
         free(chunk.memory);
+        
+        // 如果不是因长度限制被截断，或者已经得到答案，跳出循环
+        if (!length_truncated || answer) {
+            break;
+        }
     } while ((res != CURLE_OK || answer == NULL) && (--tries > 0));
 
     if (data != NULL)
