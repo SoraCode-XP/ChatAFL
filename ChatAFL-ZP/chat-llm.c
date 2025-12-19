@@ -330,8 +330,7 @@ char *format_request_message(char *message)
     char *res = ck_alloc(message_len * sizeof(char));
     for (int i = 0; i < message_len; i++)
     {
-        // If an 
- is not padded with an  before, we add it
+        // If an \n is not padded with an \r before, we add it
         if (message[i] == '\n' && (i == 0 || (message[i - 1] != '\r')))
         {
             if (res_len == max_len)
@@ -350,9 +349,7 @@ char *format_request_message(char *message)
         res[res_len++] = message[i];
     }
 
-    // Add 
-
- to ensure that the packet is accepted
+    // Add \r\n\r\n to ensure that the packet is accepted
     for (int i = 0; i < 2; i++)
     {
         if (res_len == max_len)
@@ -399,8 +396,8 @@ char *construct_prompt_for_protocol_message_types(char *protocol_name)
 }
 
 char *construct_prompt_for_requests_to_states(const char *protocol_name,
-                                          const char *protocol_state,
-                                          const char *example_requests)
+                                              const char *protocol_state,
+                                              const char *example_requests)
 {
     /***
      Prompt to ask the sequence of client requests to reach a protocol state as follows:
@@ -481,7 +478,7 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
         if (temp_obj)
         {
             // printf("Extracted grammar: %s\n", json_object_to_json_string(temp_obj));
-            kl_push(gram, grammar_list, temp_obj);
+            kv_push(gram, grammar_list, temp_obj);
         }
         else
         {
@@ -492,10 +489,10 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
 }
 
 char *extract_message_pattern(const char *header_str,
-                           khash_t(field_table) * field_table,
-                           pcre2_code **patterns,
-                           int debug_file,
-                           const char *debug_file_name)
+                               khash_t(field_table) * field_table,
+                               pcre2_code **patterns,
+                               int debug_file,
+                               const char *debug_file_name)
 {
     char *pattern = NULL;
 
@@ -814,7 +811,7 @@ char *unescape_string(const char *input)
 
     for (size_t i = 0; i < len; i++)
     {
-        if (input[i] == '\' && i + 1 < len)
+        if (input[i] == '\\' && i + 1 < len)
         {
             switch (input[i + 1])
             {
@@ -917,10 +914,6 @@ message_set_list message_combinations(khash_t(strSet)* sequence, int size)
     return result;
 }
 
-// // For debugging
-// // gcc -g -o chat-llm chat-llm.c chat-llm.h -lcurl -ljson-c -lpcre2-8
-// int main(int argc, char **argv)
-// {
-//     char *protocol_name = argv[1];
-//     char *in_dir = argv[2];
-// }
+int min(int a, int b) {
+    return a < b ? a : b;
+}
