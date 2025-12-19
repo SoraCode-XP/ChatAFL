@@ -950,16 +950,12 @@ json_object* build_zhipu_request_json(const char* model, const char* prompt, int
     // 添加model字段
     json_object_object_add(request_obj, "model", json_object_new_string(model));
 
-    // 添加messages字段 - 这里假设prompt已经是有效的JSON数组字符串
-    json_object* messages_obj = json_tokener_parse(prompt);
-    if (!messages_obj) {
-        // 如果解析失败，创建一个简单的messages数组
-        messages_obj = json_object_new_array();
-        json_object* message_obj = json_object_new_object();
-        json_object_object_add(message_obj, "role", json_object_new_string("user"));
-        json_object_object_add(message_obj, "content", json_object_new_string(prompt));
-        json_object_array_add(messages_obj, message_obj);
-    }
+    // 添加messages字段 - 直接创建一个messages数组，包含用户消息
+    json_object* messages_obj = json_object_new_array();
+    json_object* message_obj = json_object_new_object();
+    json_object_object_add(message_obj, "role", json_object_new_string("user"));
+    json_object_object_add(message_obj, "content", json_object_new_string(prompt));
+    json_object_array_add(messages_obj, message_obj);
     json_object_object_add(request_obj, "messages", messages_obj);
 
     // 添加max_tokens字段
