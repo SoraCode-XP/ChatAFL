@@ -131,6 +131,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     char *content_header = "Content-Type: application/json";
     char *accept_header = "Accept: application/json";
     char *user_header = "User-Agent: ChatAFL/1.0";
+    char *charset_header = "charset: utf-8";
     char *data = NULL;
     // 统一使用智谱AI的glm-4.5-flash模型
     asprintf(&data, "{\"model\": \"glm-4.5-flash\", \"messages\": %s, \"max_tokens\": %d, \"temperature\": %f}", prompt, MAX_TOKENS, temperature);
@@ -150,6 +151,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
             headers = curl_slist_append(headers, content_header);
             headers = curl_slist_append(headers, accept_header);
             headers = curl_slist_append(headers, user_header);
+            headers = curl_slist_append(headers, charset_header);
 
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
