@@ -697,9 +697,18 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
                         }
                         first = 0;
                         
-                        // 为每个标识符添加引号
+                        // 为每个标识符添加引号，并确保正确处理转义字符
                         strcat(json_str, "\"");
-                        strcat(json_str, token);
+                        
+                        // 处理token中的特殊字符，确保JSON格式正确
+                        char *escaped_token = safe_escape_for_json(token);
+                        if (escaped_token) {
+                            strcat(json_str, escaped_token);
+                            free(escaped_token);
+                        } else {
+                            strcat(json_str, token);
+                        }
+                        
                         strcat(json_str, "\"");
                     }
                     
