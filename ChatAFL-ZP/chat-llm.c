@@ -625,26 +625,41 @@ void extract_message_grammars(char *answers, klist_t(gram) * grammar_list)
                 strcpy(json_str, "[");
                 
                 // 解析原始数组内容
-                char *content = (char *)ck_alloc(strlen(temp) - 1);
-                strncpy(content, temp + 1, strlen(temp) - 2);
-                content[strlen(temp) - 2] = '\0';
+                size_t temp_len = strlen(temp);
+                char *content = (char *)ck_alloc(temp_len);
+                strncpy(content, temp + 1, temp_len - 2);
+                content[temp_len - 2] = '\0';
                 
-                // 分割并处理每个元素
-                char *token = strtok(content, ", ");
+                // 使用更安全的方法分割并处理每个元素
+                char *token = content;
+                char *next_token;
                 int first = 1;
                 
-                while (token != NULL) {
-                    if (!first) {
-                        strcat(json_str, ", ");
+                while (token != NULL && *token != '\0') {
+                    // 查找下一个分隔符
+                    next_token = strstr(token, ", ");
+                    
+                    if (next_token != NULL) {
+                        *next_token = '\0'; // 临时替换为字符串结束符
+                        next_token += 2; // 跳过分隔符
                     }
-                    first = 0;
                     
-                    // 为每个标识符添加引号
-                    strcat(json_str, "\"");
-                    strcat(json_str, token);
-                    strcat(json_str, "\"");
+                    // 跳过空格
+                    while (*token == ' ') token++;
                     
-                    token = strtok(NULL, ", ");
+                    if (*token != '\0') {
+                        if (!first) {
+                            strcat(json_str, ", ");
+                        }
+                        first = 0;
+                        
+                        // 为每个标识符添加引号
+                        strcat(json_str, "\"");
+                        strcat(json_str, token);
+                        strcat(json_str, "\"");
+                    }
+                    
+                    token = next_token;
                 }
                 
                 strcat(json_str, "]");
