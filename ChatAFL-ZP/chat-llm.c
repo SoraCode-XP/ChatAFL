@@ -114,7 +114,12 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                     // 如果直接解析失败，尝试提取JSON部分
                     char *json_start = strchr(chunk.memory, '{');
                     if (json_start) {
-                        jobj = json_tokener_parse(json_start);
+                        json_object *jobj2 = json_tokener_parse(json_start);
+                        if (!jobj2) {
+                            printf("错误: 无法解析智谱AI响应为JSON: %s\n", chunk.memory);
+                            continue;
+                        }
+                        jobj = jobj2;
                     }
 
                     if (!jobj) {
@@ -688,7 +693,7 @@ void get_protocol_message_types(char *state_prompt, khash_t(strSet) * message_ty
 
             // Add to the set
             int ret;
-            khiter_t k = kh_put(strSet, message_types, message_type, &ret);
+            khiter_t k = kh_put(strSet, message_types, message_type, &ret); /* k is not used */
             if (ret == 0)
             {
                 // Already exists
@@ -932,7 +937,13 @@ char* create_safe_json_string(const char* input) {
     // 使用json-c库的内置转义功能
     json_object* jobj = json_object_new_string(input);
     const char* json_str = json_object_get_string(jobj);
-
+    
+    // 检查 json_str 是否为 NULL
+    if (!json_str) {
+        json_object_put(jobj);
+        return strdup("");
+    }
+    
     // 创建一个新的副本，因为json_object_put会释放内存
     char* result = strdup(json_str);
     json_object_put(jobj);
@@ -1059,7 +1070,13 @@ char* safe_escape_for_json(const char* input) {
     // 使用json_object_new_string和json_object_get_string来确保正确的转义
     json_object* jobj = json_object_new_string(input);
     const char* escaped = json_object_get_string(jobj);
-
+    
+    // 检查 escaped 是否为 NULL
+    if (!escaped) {
+        json_object_put(jobj);
+        return strdup("");
+    }
+    
     // 创建副本
     char* result = strdup(escaped);
     json_object_put(jobj);
