@@ -435,7 +435,6 @@ void setup_llm_grammars()
 {
 
   ACTF("Getting grammars from LLM...");
-  ACTF("Starting protocol grammar extraction for %s", protocol_name);
 
   khash_t(consistency_table) *const_table = kh_init(consistency_table);
   char *first_question;
@@ -2632,9 +2631,6 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     printf("Error in reading the directory %s\n", in_dir);
     exit(1);
   }
-  
-  // 添加日志：记录种子增强开始
-  ACTF("Starting seed enrichment for %d message types", kh_size(message_types_set));
 
   // traverse the directory to read the files
   for (int i = 0; i < nl_cnt; i++)
@@ -2675,12 +2671,12 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     khash_t(strSet) *messages = duplicate_hash(message_types_set); // duplicate the message set
 
     for (int j = 0; j < region_count; j++)
-    { 
+    {
       // remove all messages that are observed
       int header_len = 0;
-      while (regions[j].start_byte + header_len < regions[j].end_byte 
-      && nl_file_content[regions[j].start_byte + header_len] != ' ' 
-      && nl_file_content[regions[j].start_byte + header_len] != '\r' 
+      while (regions[j].start_byte + header_len < regions[j].end_byte
+      && nl_file_content[regions[j].start_byte + header_len] != ' '
+      && nl_file_content[regions[j].start_byte + header_len] != '\r'
       && nl_file_content[regions[j].start_byte + header_len] != '\n'
       && nl_file_content[regions[j].start_byte + header_len] != '\\')
       {
@@ -2709,7 +2705,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
       continue;
     }
 
-    while(kh_size(messages) > MAX_ENRICHMENT_CORPUS_SIZE) 
+    while(kh_size(messages) > MAX_ENRICHMENT_CORPUS_SIZE)
     {
       khiter_t x =UR(kh_end(messages));
       if (kh_exist(messages, x))
@@ -2722,7 +2718,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
 
     for(int i = 0;i < kv_size(message_subsets);i++) {
 
-      khash_t(strSet)* subset = kv_A(message_subsets,i); 
+      khash_t(strSet)* subset = kv_A(message_subsets,i);
 
       // Try enriching the sequence
         char *client_request_answer = enrich_sequence(nl_file_content, subset);
@@ -2753,7 +2749,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
         strcpy(enriched_file_path, in_dir);
         strcat(enriched_file_path, "/");
         strcat(enriched_file_path, enriched_file_name);
-        
+
         // printf("## Enriched file path: %s\n", enriched_file_path);
 
         write_new_seeds(enriched_file_path, unescaped_client_requests);
@@ -2765,7 +2761,7 @@ void get_seeds_with_messsage_types(const char *in_dir, khash_t(strSet) * message
     for(int i = 0;i < kv_size(message_subsets);i++) {
       khash_t(strSet)* subset = kv_A(message_subsets,i);
       kh_destroy(strSet,subset);
-    } 
+    }
 
     kh_destroy(strSet, messages);
   }
@@ -6852,10 +6848,6 @@ AFLNET_REGIONS_SELECTION:;
     uninteresting_times = 0;
     // Fuzzing is stalled - ask LLM for help by taking the current sequence and if it is has a prefix,
     // ask the LLM to generate a possibly correct next message
-    
-    // 添加日志：记录状态停滞处理
-    ACTF("Fuzzing stalled after %d uninteresting attempts, calling LLM for guidance (attempt %d/%d)", 
-         UNINTERESTING_THRESHOLD, chat_times + 1, CHATTING_THRESHOLD);
     u32 *response_bytes_temp = NULL;
     u32 buffer_len = 0;
 
@@ -6966,7 +6958,7 @@ AFLNET_REGIONS_SELECTION:;
           close(stall_prompt_fd);
           ck_free(stall_prompt_path);
         }
-        
+
 
         if (stall_response == NULL)
           goto free_stall;
@@ -10692,7 +10684,7 @@ int main(int argc, char **argv)
     message_types_set = kh_init(strSet);
 
     setup_llm_grammars();
-    enrich_testcases();
+    //enrich_testcases();
   }
   read_testcases();
   load_auto();
