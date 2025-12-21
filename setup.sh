@@ -1,7 +1,21 @@
 #!/bin/bash
 
-# Parse optional first argument for specific image to build
-BUILD_TARGET=$1
+# Parse command line arguments
+BUILD_TARGET=""
+NO_CACHE=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --no-cache)
+            NO_CACHE=1
+            shift
+            ;;
+        *)
+            BUILD_TARGET="$1"
+            shift
+            ;;
+    esac
+done
 
 if [ -z $KEY ] && [ -z $ZHIPU_KEY ]; then
     echo "NO API KEY PROVIDED! Please set either the KEY (OpenAI) or ZHIPU_KEY (Zhipu AI) environment variable"
@@ -66,4 +80,4 @@ done;
 
 PFBENCH="$PWD/benchmark"
 cd $PFBENCH
-PFBENCH=$PFBENCH IMAGE_PREFIX=$IMAGE_PREFIX BUILD_TARGET=$BUILD_TARGET scripts/execution/profuzzbench_build_all.sh
+PFBENCH=$PFBENCH IMAGE_PREFIX=$IMAGE_PREFIX BUILD_TARGET=$BUILD_TARGET NO_CACHE=$NO_CACHE scripts/execution/profuzzbench_build_all.sh
