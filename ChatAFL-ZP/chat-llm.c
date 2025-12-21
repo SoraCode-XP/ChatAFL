@@ -387,100 +387,40 @@ char *construct_prompt_stall(char *protocol_name, char *examples, char *history)
     char *prompt = NULL;
     asprintf(&prompt, template, protocol_name, protocol_name, protocol_name, examples, history);
 
-    // 使用优化的JSON构建函数
-    json_object *messages_array = build_message_array("You are a helpful assistant.", prompt);
-    const char *messages_json = json_object_to_json_string(messages_array);
-    char *final_prompt = strdup(messages_json);
+    char *final_prompt = NULL;
+
+    asprintf(&final_prompt, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", prompt);
 
     free(prompt);
-    json_object_put(messages_array);
 
     return final_prompt;
 }
 
 char *construct_prompt_for_templates(char *protocol_name, char **final_msg)
 {
-    // 使用安全的字符串转义
-    char *prompt_rtsp_example = safe_escape_for_json(
-        "For the RTSP protocol, the DESCRIBE client request template is:\n"
-        "DESCRIBE: [\"DESCRIBE <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Accept: application/sdp\\r\\n\","
-        "\"\\r\\n\"]\n\n"
-        "For the RTSP protocol, the OPTIONS client request template is:\n"
-        "OPTIONS: [\"OPTIONS <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"User-Agent: <<VALUE>>\\r\\n\","
-        "\"\\r\\n\"]\n\n"
-        "For the RTSP protocol, the SETUP client request template is:\n"
-        "SETUP: [\"SETUP <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Transport: RTP/AVP;unicast;client_port=<<VALUE>>-<<VALUE>>\\r\\n\","
-        "\"\\r\\n\"]\n\n"
-        "For the RTSP protocol, the PLAY client request template is:\n"
-        "PLAY: [\"PLAY <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Session: <<session ID>>\\r\\n\","
-        "\"Range: <<range-spec>>\\r\\n\","
-        "\"\\r\\n\"]\n\n"
-        "For the RTSP protocol, the PAUSE client request template is:\n"
-        "PAUSE: [\"PAUSE <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Session: <<session ID>>\\r\\n\","
-        "\"\\r\\n\"]\n\n"
-        "For the RTSP protocol, the TEARDOWN client request template is:\n"
-        "TEARDOWN: [\"TEARDOWN <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Session: <<session ID>>\\r\\n\","
-        "\"\\r\\n\"]\n\n"
-        "For the RTSP protocol, the GET_PARAMETER client request template is:\n"
-        "GET_PARAMETER: [\"GET_PARAMETER <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Session: <<session ID>>\\r\\n\","
-        "\"\\r\\n\"]\n\n"
-        "For the RTSP protocol, the SET_PARAMETER client request template is:\n"
-        "SET_PARAMETER: [\"SET_PARAMETER <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Session: <<session ID>>\\r\\n\","
-        "\"Content-Type: text/parameters\\r\\n\","
-        "\"Content-Length: <<length>>\\r\\n\","
-        "\"\\r\\n\","
-        "\"<<parameter body>>\"]\n\n"
-        "For the RTSP protocol, the ANNOUNCE client request template is:\n"
-        "ANNOUNCE: [\"ANNOUNCE <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Date: <<RFC1123 date>>\\r\\n\","
-        "\"Content-Type: <<content-type>>\\r\\n\","
-        "\"Content-Length: <<length>>\\r\\n\","
-        "\"\\r\\n\","
-        "\"<<description body>>\"]\n\n"
-        "For the RTSP protocol, the RECORD client request template is:\n"
-        "RECORD: [\"RECORD <<URI>> RTSP/1.0\\r\\n\","
-        "\"CSeq: <<VALUE>>\\r\\n\","
-        "\"Session: <<session ID>>\\r\\n\","
-        "\"Range: <<range-spec>>\\r\\n\","
-        "\"\\r\\n\"]"
-    );
+    // Give one example for learning formats
+    char *prompt_rtsp_example = "For the RTSP protocol, the DESCRIBE client request template is:\\n"
+                                "DESCRIBE: [\\\"DESCRIBE <<VALUE>>\\\\r\\\\n\\\","
+                                "\\\"CSeq: <<VALUE>>\\\\r\\\\n\\\","
+                                "\\\"User-Agent: <<VALUE>>\\\\r\\\\n\\\","
+                                "\\\"Accept: <<VALUE>>\\\\r\\\\n\\\","
+                                "\\\"\\\\r\\\\n\\\"]";
 
-
-    char *prompt_http_example = safe_escape_for_json(
-        "For the HTTP protocol, the GET client request template is:\n"
-        "GET: [\"GET <<VALUE>>\\r\\n\"]"
-    );
+    char *prompt_http_example = "For the HTTP protocol, the GET client request template is:\\n"
+                                "GET: [\\\"GET <<VALUE>>\\\\r\\\\n\\\"]";
 
     char *msg = NULL;
-    asprintf(&msg, "%s\n%s\nFor the %s protocol, all of client request templates are :", 
-             prompt_rtsp_example, prompt_http_example, protocol_name);
+    asprintf(&msg, "%s\\n%s\\nFor the %s protocol, all of client request templates are :", prompt_rtsp_example, prompt_http_example, protocol_name);
     *final_msg = msg;
+    /** Format of prompt_grammars
+    prompt_grammars = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": msg}
+    ]
+     **/
+    char *prompt_grammars = NULL;
 
-    // 使用优化的JSON构建函数
-    json_object *messages_array = build_message_array("You are a helpful assistant.", msg);
-    const char *messages_json = json_object_to_json_string(messages_array);
-    char *prompt_grammars = strdup(messages_json);
-
-    free(prompt_rtsp_example);
-    free(prompt_http_example);
-    json_object_put(messages_array);
+    asprintf(&prompt_grammars, "[{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"}, {\"role\": \"user\", \"content\": \"%s\"}]", msg);
 
     return prompt_grammars;
 }
@@ -490,18 +430,25 @@ char *construct_prompt_for_remaining_templates(char *protocol_name, char *first_
     char *second_question = NULL;
     asprintf(&second_question, "For the %s protocol, other templates of client requests are:", protocol_name);
 
-    // 使用优化的JSON构建函数
-    json_object *messages_array = build_conversation_array(
-        "You are a helpful assistant.", 
-        first_question, 
-        first_answer, 
-        second_question
-    );
-    const char *messages_json = json_object_to_json_string(messages_array);
-    char *prompt = strdup(messages_json);
+    json_object *answer_str = json_object_new_string(first_answer);
+    // printf("The First Question\n%s\n\n", first_question);
+    // printf("The First Answer\n%s\n\n", first_answer);
+    // printf("The Second Question\n%s\n\n", second_question);
+    const char *answer_str_escaped = json_object_to_json_string(answer_str);
 
+    char *prompt = NULL;
+
+    asprintf(&prompt,
+             "["
+             "{\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},"
+             "{\"role\": \"user\", \"content\": \"%s\"},"
+             "{\"role\": \"assistant\", \"content\": %s },"
+             "{\"role\": \"user\", \"content\": \"%s\"}"
+             "]",
+             first_question, answer_str_escaped, second_question);
+
+    json_object_put(answer_str);
     free(second_question);
-    json_object_put(messages_array);
 
     return prompt;
 }
