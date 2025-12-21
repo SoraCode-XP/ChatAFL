@@ -100,11 +100,18 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     char *auth_header;
     // 使用头文件中定义的ZHIPU_TOKEN宏
     const char *zhipu_token = ZHIPU_TOKEN;
+    printf("智谱AI Token长度: %zu\n", strlen(zhipu_token));
     if (strlen(zhipu_token) == 0) {
         printf("Error: ZHIPU_TOKEN is not set in chat-llm.h\n");
         return NULL;
     }
+    // 检查token是否是默认值
+    if (strcmp(zhipu_token, "your_api_token_here") == 0) {
+        printf("Error: ZHIPU_TOKEN is still set to the default value. Please update it with your actual API token.\n");
+        return NULL;
+    }
     asprintf(&auth_header, "Authorization: Bearer %s", zhipu_token);
+    printf("认证头长度: %zu\n", strlen(auth_header));
     char *content_header = "Content-Type: application/json";
     char *accept_header = "Accept: application/json";
     char *user_header = "User-Agent: ChatAFL/1.0";
@@ -112,6 +119,10 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
 
     // 使用优化的JSON构建函数，初始使用较小的token数
     char *data = build_zhipu_request_string("glm-4.5-flash", prompt, current_max_tokens, temperature);
+    
+    // 添加日志：输出发送给智谱AI的请求内容
+    printf("发送给智谱AI的请求: %s\n", data);
+    printf("请求长度: %zu 字符\n", strlen(data));
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     do
@@ -211,15 +222,38 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                 json_object *error_obj = NULL;
                 if (json_object_object_get_ex(jobj, "error", &error_obj))
                 {
+                    // 获取错误代码
+                    json_object *code_obj = json_object_object_get(error_obj, "code");
+                    const char *error_code = code_obj ? json_object_get_string(code_obj) : "未知代码";
+                    
+                    // 获取错误消息
                     json_object *message_obj = json_object_object_get(error_obj, "message");
-                    const char *error_msg = json_object_get_string(message_obj);
-                    printf("智谱AI API错误: %s\n", error_msg ? error_msg : "未知错误");
-
+                    const char *error_msg = message_obj ? json_object_get_string(message_obj) : "未知错误";
+                    
+                    // 获取错误类型
+                    json_object *type_obj = json_object_object_get(error_obj, "type");
+                    const char *error_type = type_obj ? json_object_get_string(type_obj) : "未知类型";
+                    
+                    printf("智谱AI API错误详情:\n");
+                    printf("  错误代码: %s\n", error_code);
+                    printf("  错误类型: %s\n", error_type);
+                    printf("  错误消息: %s\n", error_msg);
+                    printf("  请求URL: %s\n", url);
+                    printf("  请求模型: glm-4.5-flash\n");
+                    printf("  请求Token数: %d\n", current_max_tokens);
+                    printf("  请求温度: %.2f\n", temperature);
+                    
                     // 检查是否是并发限制错误
-                    if (error_msg && strstr(error_msg, "1302") != NULL) {
+                    if (error_code && strstr(error_code, "1302") != NULL) {
                         printf("检测到并发限制错误，将等待更长时间后重试\n");
                         sleep(ZHIPU_RATE_LIMIT_DELAY); // 使用配置的延迟时间
+                    } else if (error_code && strstr(error_code, "1210") != NULL) {
+                        printf("检测到API参数错误，请检查请求格式\n");
+                        // 输出请求内容以便调试
+                        printf("发送的请求内容: %s\n", data);
+                        sleep(2); // 等待一段时间以便服务恢复
                     } else {
+                        printf("其他类型错误，等待2秒后重试\n");
                         sleep(2); // 等待一段时间以便服务恢复
                     }
                 }
@@ -1198,26 +1232,52 @@ char* create_safe_json_string(const char* input) {
  * 构建智谱AI API请求的JSON对象
  */
 json_object* build_zhipu_request_json(const char* model, const char* prompt, int max_tokens, float temperature) {
+    // 添加日志：开始构建请求JSON
+    printf("开始构建智谱AI请求JSON\n");
+    
     // 创建根对象
     json_object* request_obj = json_object_new_object();
+    if (!request_obj) {
+        printf("错误：无法创建JSON根对象\n");
+        return NULL;
+    }
 
     // 添加model字段
+    printf("添加model字段: %s\n", model);
     json_object_object_add(request_obj, "model", json_object_new_string(model));
 
     // 添加messages字段 - 直接创建一个messages数组，包含用户消息
+    printf("构建messages数组\n");
     json_object* messages_obj = json_object_new_array();
+    if (!messages_obj) {
+        printf("错误：无法创建messages数组\n");
+        json_object_put(request_obj);
+        return NULL;
+    }
+    
     json_object* message_obj = json_object_new_object();
+    if (!message_obj) {
+        printf("错误：无法创建消息对象\n");
+        json_object_put(messages_obj);
+        json_object_put(request_obj);
+        return NULL;
+    }
+    
+    printf("添加消息角色和内容\n");
     json_object_object_add(message_obj, "role", json_object_new_string("user"));
     json_object_object_add(message_obj, "content", json_object_new_string(prompt));
     json_object_array_add(messages_obj, message_obj);
     json_object_object_add(request_obj, "messages", messages_obj);
 
     // 添加max_tokens字段
+    printf("添加max_tokens字段: %d\n", max_tokens);
     json_object_object_add(request_obj, "max_tokens", json_object_new_int(max_tokens));
 
     // 添加temperature字段
+    printf("添加temperature字段: %.2f\n", temperature);
     json_object_object_add(request_obj, "temperature", json_object_new_double(temperature));
-
+    
+    printf("智谱AI请求JSON构建完成\n");
     return request_obj;
 }
 
@@ -1225,8 +1285,15 @@ json_object* build_zhipu_request_json(const char* model, const char* prompt, int
  * 构建智谱AI API请求的JSON字符串
  */
 char* build_zhipu_request_string(const char* model, const char* prompt, int max_tokens, float temperature) {
+    // 添加日志：记录请求参数
+    printf("构建智谱AI请求 - 模型: %s, 最大令牌数: %d, 温度: %.2f\n", model, max_tokens, temperature);
+    printf("提示词长度: %zu 字符\n", strlen(prompt));
+    
     json_object* request_obj = build_zhipu_request_json(model, prompt, max_tokens, temperature);
     const char* json_str = json_object_to_json_string(request_obj);
+    
+    // 添加日志：记录生成的JSON请求
+    printf("生成的JSON请求: %s\n", json_str);
 
     // 创建一个新的副本
     char* result = strdup(json_str);
