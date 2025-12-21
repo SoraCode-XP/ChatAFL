@@ -112,10 +112,11 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     }
     asprintf(&auth_header, "Authorization: Bearer %s", zhipu_token);
     printf("认证头长度: %zu\n", strlen(auth_header));
-    char *content_header = "Content-Type: application/json";
+    char *content_header = "Content-Type: application/json; charset=utf-8";
     char *accept_header = "Accept: application/json";
     char *user_header = "User-Agent: ChatAFL/1.0";
-    char *charset_header = "charset: utf-8";
+    // 不使用单独的charset头，而是在Content-Type中指定
+    // char *charset_header = "charset: utf-8";
 
     // 使用优化的JSON构建函数，初始使用较小的token数
     char *data = build_zhipu_request_string("glm-4.5-flash", prompt, current_max_tokens, temperature);
@@ -140,7 +141,8 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
             headers = curl_slist_append(headers, content_header);
             headers = curl_slist_append(headers, accept_header);
             headers = curl_slist_append(headers, user_header);
-            headers = curl_slist_append(headers, charset_header);
+            // 不使用单独的charset头
+            // headers = curl_slist_append(headers, charset_header);
 
             curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
@@ -1276,6 +1278,10 @@ json_object* build_zhipu_request_json(const char* model, const char* prompt, int
     // 添加temperature字段
     printf("添加temperature字段: %.2f\n", temperature);
     json_object_object_add(request_obj, "temperature", json_object_new_double(temperature));
+    
+    // 添加stream字段，设置为false，确保不是流式响应
+    printf("添加stream字段: false\n");
+    json_object_object_add(request_obj, "stream", json_object_new_boolean(false));
     
     printf("智谱AI请求JSON构建完成\n");
     return request_obj;
