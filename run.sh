@@ -18,4 +18,11 @@ then
     exit 1
 fi
 
-PFBENCH=$PFBENCH PATH=$PATH NUM_CONTAINERS=$NUM_CONTAINERS TIMEOUT=$TIMEOUT SKIPCOUNT=$SKIPCOUNT TEST_TIMEOUT=$TEST_TIMEOUT scripts/execution/profuzzbench_exec_all.sh ${TARGET_LIST} ${FUZZER_LIST}
+# Set the image prefix based on which API key is provided
+if [ ! -z $ZHIPU_KEY ]; then
+    export IMAGE_PREFIX="chataflzp-"
+else
+    export IMAGE_PREFIX=""
+fi
+
+PFBENCH=$PFBENCH PATH=$PATH NUM_CONTAINERS=$NUM_CONTAINERS TIMEOUT=$TIMEOUT SKIPCOUNT=$SKIPCOUNT TEST_TIMEOUT=$TEST_TIMEOUT IMAGE_PREFIX=$IMAGE_PREFIX scripts/execution/profuzzbench_exec_all.sh ${TARGET_LIST} ${FUZZER_LIST}

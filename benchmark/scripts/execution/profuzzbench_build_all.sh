@@ -13,27 +13,27 @@ export MAKE_OPT="-j4"
 
 cd $PFBENCH
 cd subjects/FTP/ProFTPD
-docker build . -t proftpd --build-arg MAKE_OPT $NO_CACHE
+docker build . -t ${IMAGE_PREFIX}proftpd --build-arg MAKE_OPT $NO_CACHE
 
 cd $PFBENCH
 cd subjects/FTP/PureFTPD
-docker build . -t pure-ftpd --build-arg MAKE_OPT $NO_CACHE
+docker build . -t ${IMAGE_PREFIX}pure-ftpd --build-arg MAKE_OPT $NO_CACHE
 
 cd $PFBENCH
 cd subjects/SMTP/Exim
-docker build . -t exim --build-arg MAKE_OPT $NO_CACHE
+docker build . -t ${IMAGE_PREFIX}exim --build-arg MAKE_OPT $NO_CACHE
 
 cd $PFBENCH
 cd subjects/RTSP/Live555
-docker build . -t live555 --build-arg MAKE_OPT $NO_CACHE
+docker build . -t ${IMAGE_PREFIX}live555 --build-arg MAKE_OPT $NO_CACHE
 
 cd $PFBENCH
 cd subjects/SIP/Kamailio
-docker build . -t kamailio --build-arg MAKE_OPT $NO_CACHE
+docker build . -t ${IMAGE_PREFIX}kamailio --build-arg MAKE_OPT $NO_CACHE
 
 cd $PFBENCH
 cd subjects/DAAP/forked-daapd
-docker build . -t forked-daapd --build-arg MAKE_OPT $NO_CACHE
+docker build . -t ${IMAGE_PREFIX}forked-daapd --build-arg MAKE_OPT $NO_CACHE
 
 #cd $PFBENCH
 #cd subjects/HTTP/Lighttpd1

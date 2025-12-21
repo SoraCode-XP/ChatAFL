@@ -30,6 +30,13 @@ else
     echo "No Zhipu API key provided. You can set it later using the ZHIPU_KEY environment variable."
 fi
 
+# Set the image prefix based on which API key is provided
+if [ ! -z $ZHIPU_KEY ]; then
+    export IMAGE_PREFIX="chataflzp-"
+else
+    export IMAGE_PREFIX=""
+fi
+
 # Copy the different versions of ChatAFL to the benchmark directories
 for subject in ./benchmark/subjects/*/*; do
   rm -r $subject/aflnet 2>&1 >/dev/null
@@ -52,4 +59,4 @@ done;
 
 PFBENCH="$PWD/benchmark"
 cd $PFBENCH
-PFBENCH=$PFBENCH scripts/execution/profuzzbench_build_all.sh
+PFBENCH=$PFBENCH IMAGE_PREFIX=$IMAGE_PREFIX scripts/execution/profuzzbench_build_all.sh

@@ -43,27 +43,27 @@ do
 
             if [[ $FUZZER == "aflnet" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh lightftp $NUM_CONTAINERS results-lightftp aflnet out-lightftp-aflnet "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}lightftp $NUM_CONTAINERS results-lightftp aflnet out-lightftp-aflnet "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh lightftp $NUM_CONTAINERS results-lightftp chatafl out-lightftp-chatafl "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}lightftp $NUM_CONTAINERS results-lightftp chatafl out-lightftp-chatafl "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl-cl1" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh lightftp $NUM_CONTAINERS results-lightftp chatafl-cl1 out-lightftp-chatafl_cl1 "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}lightftp $NUM_CONTAINERS results-lightftp chatafl-cl1 out-lightftp-chatafl_cl1 "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl-cl2" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh lightftp $NUM_CONTAINERS results-lightftp chatafl-cl2 out-lightftp-chatafl_cl2 "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}lightftp $NUM_CONTAINERS results-lightftp chatafl-cl2 out-lightftp-chatafl_cl2 "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl-zp" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh lightftp $NUM_CONTAINERS results-lightftp chatafl-zp out-lightftp-chatafl_zp "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}lightftp $NUM_CONTAINERS results-lightftp chatafl-zp out-lightftp-chatafl_zp "-P FTP -D 10000 -q 3 -s 3 -E -K -m none -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
             fi
 
         fi
@@ -77,17 +77,17 @@ do
 
             if [[ $FUZZER == "aflnet" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh bftpd $NUM_CONTAINERS results-bftpd aflnet out-bftpd-aflnet "-m none -P FTP -D 10000 -q 3 -s 3 -E -K -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}bftpd $NUM_CONTAINERS results-bftpd aflnet out-bftpd-aflnet "-m none -P FTP -D 10000 -q 3 -s 3 -E -K -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh bftpd $NUM_CONTAINERS results-bftpd chatafl out-bftpd-chatafl "-m none -P FTP -D 10000 -q 3 -s 3 -E -K -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}bftpd $NUM_CONTAINERS results-bftpd chatafl out-bftpd-chatafl "-m none -P FTP -D 10000 -q 3 -s 3 -E -K -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
             fi
             
             if [[ $FUZZER == "chatafl-cl1" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh bftpd $NUM_CONTAINERS results-bftpd chatafl-cl1 out-bftpd-chatafl_cl1 "-m none -P FTP -D 10000 -q 3 -s 3 -E -K -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}bftpd $NUM_CONTAINERS results-bftpd chatafl-cl1 out-bftpd-chatafl_cl1 "-m none -P FTP -D 10000 -q 3 -s 3 -E -K -t ${TEST_TIMEOUT}+" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl-cl2" ]] || [[ $FUZZER == "all" ]]
