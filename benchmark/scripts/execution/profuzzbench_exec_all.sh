@@ -221,22 +221,22 @@ do
 
             if [[ $FUZZER == "chatafl" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh live555 $NUM_CONTAINERS results-live555 chatafl out-live555-chatafl "-P RTSP -D 10000 -q 3 -s 3 -E -K -R -m none" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}live555 $NUM_CONTAINERS results-live555 chatafl out-live555-chatafl "-P RTSP -D 10000 -q 3 -s 3 -E -K -R -m none" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl-cl1" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh live555 $NUM_CONTAINERS results-live555 chatafl-cl1 out-live555-chatafl_cl1 "-P RTSP -D 10000 -q 3 -s 3 -E -K -R -m none" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}live555 $NUM_CONTAINERS results-live555 chatafl-cl1 out-live555-chatafl_cl1 "-P RTSP -D 10000 -q 3 -s 3 -E -K -R -m none" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl-cl2" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh live555 $NUM_CONTAINERS results-live555 chatafl-cl2 out-live555-chatafl_cl2 "-P RTSP -D 10000 -q 3 -s 3 -E -K -R -m none" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}live555 $NUM_CONTAINERS results-live555 chatafl-cl2 out-live555-chatafl_cl2 "-P RTSP -D 10000 -q 3 -s 3 -E -K -R -m none" $TIMEOUT $SKIPCOUNT &
             fi
 
             if [[ $FUZZER == "chatafl-zp" ]] || [[ $FUZZER == "all" ]]
             then
-                profuzzbench_exec_common.sh live555 $NUM_CONTAINERS results-live555 chatafl-zp out-live555-chatafl_zp "-P RTSP -D 10000 -q 3 -s 3 -E -K -R -m none" $TIMEOUT $SKIPCOUNT &
+                profuzzbench_exec_common.sh ${IMAGE_PREFIX}live555 $NUM_CONTAINERS results-live555 chatafl-zp out-live555-chatafl_zp "-P RTSP -D 10000 -q 3 -s 3 -E -K -R -m none" $TIMEOUT $SKIPCOUNT &
             fi
 
         fi
