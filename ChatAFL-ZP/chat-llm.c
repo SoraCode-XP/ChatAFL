@@ -93,7 +93,7 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     ACTF("Prompt length: %d characters", (int)strlen(prompt));
 
     // 添加变量用于跟踪速率限制
-    int rate_limited = 0;
+    // int rate_limited = 0; // 暂时注释掉，避免未使用变量警告
 
     // 统一使用智谱AI的API
     url = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
@@ -892,8 +892,8 @@ range_list starts_with(char *line, int length, pcre2_code *pattern)
     range_list result;
     kv_init(result);
 
-    int errornumber;
-    size_t erroroffset;
+    // int errornumber; // 未使用，注释掉避免警告
+    // size_t erroroffset; // 未使用，注释掉避免警告
     pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(pattern, NULL);
     int rc = pcre2_match(pattern, line, length, 0, 0, match_data, NULL);
 
@@ -916,8 +916,8 @@ range_list get_mutable_ranges(char *line, int length, int offset, pcre2_code *pa
     range_list result;
     kv_init(result);
 
-    int errornumber;
-    size_t erroroffset;
+    // int errornumber; // 未使用，注释掉避免警告
+    // size_t erroroffset; // 未使用，注释掉避免警告
     pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(pattern, NULL);
     int rc = pcre2_match(pattern, line, length, 0, 0, match_data, NULL);
 
@@ -973,6 +973,7 @@ void get_protocol_message_types(char *state_prompt, khash_t(strSet) * message_ty
             // Add to the set
             int ret;
             khiter_t k = kh_put(strSet, message_types, message_type, &ret); /* k is not used */
+            (void)k; /* 显式标记为未使用，避免编译器警告 */
             if (ret == 0)
             {
                 // Already exists
@@ -1281,7 +1282,7 @@ json_object* build_zhipu_request_json(const char* model, const char* prompt, int
     
     // 添加stream字段，设置为false，确保不是流式响应
     printf("添加stream字段: false\n");
-    json_object_object_add(request_obj, "stream", json_object_new_boolean(false));
+    json_object_object_add(request_obj, "stream", json_object_new_boolean(0));
     
     printf("智谱AI请求JSON构建完成\n");
     return request_obj;
