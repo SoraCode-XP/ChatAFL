@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <json-c/json.h>
+#include <execinfo.h>
 
 #include <pthread.h>
 
@@ -84,6 +85,22 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
     int max_token_limit = MAX_TOKENS;  // 最大不超过定义的MAX_TOKENS
     int retry_count = 0;
     int length_truncated = 0;  // 标记是否因长度限制被截断
+
+    // 打印调用栈信息，帮助调试
+    void *array[10];
+    size_t size;
+    char **strings;
+    size_t i;
+    
+    // 获取调用栈
+    size = backtrace(array, 10);
+    strings = backtrace_symbols(array, size);
+    
+    printf("调用栈信息:\n");
+    for (i = 0; i < size; i++) {
+        printf("  %s\n", strings[i]);
+    }
+    free(strings);
 
     // 等待可用的API调用槽位
     wait_for_api_call_slot();
@@ -253,6 +270,22 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                         printf("检测到API参数错误，请检查请求格式\n");
                         // 输出请求内容以便调试
                         printf("发送的请求内容: %s\n", data);
+                        
+                        // 打印调用栈信息，帮助定位问题来源
+                        void *error_array[10];
+                        size_t error_size;
+                        char **error_strings;
+                        size_t j;
+                        
+                        error_size = backtrace(error_array, 10);
+                        error_strings = backtrace_symbols(error_array, error_size);
+                        
+                        printf("错误发生时的调用栈信息:\n");
+                        for (j = 0; j < error_size; j++) {
+                            printf("  %s\n", error_strings[j]);
+                        }
+                        free(error_strings);
+                        
                         sleep(2); // 等待一段时间以便服务恢复
                     } else {
                         printf("其他类型错误，等待2秒后重试\n");
