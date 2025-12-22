@@ -28,18 +28,28 @@ static pthread_mutex_t api_call_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // 等待直到可以开始新的API调用
 static void wait_for_api_call_slot() {
+    // 添加随机延迟，避免多个线程同时请求
+    usleep(rand() % 500000); // 0-0.5秒的随机微秒延迟
+    
     while (1) {
         pthread_mutex_lock(&api_call_mutex);
         if (active_api_calls < MAX_ZHIPU_CONCURRENT_CALLS) {
             active_api_calls++;
             pthread_mutex_unlock(&api_call_mutex);
-            // 即使没有达到并发限制，也添加一个小的随机延迟，避免所有请求同时发出
-            int random_delay = rand() % 2; // 0-1秒的随机延迟
-            if (random_delay > 0) sleep(random_delay);
+            
+            // 添加一个小的随机延迟，避免所有请求同时发出
+            int random_delay = rand() % 3; // 0-2秒的随机延迟
+            if (random_delay > 0) {
+                // 使用微秒级别的随机延迟，使请求分布更均匀
+                usleep(rand() % 1000000); // 0-1秒的随机微秒延迟
+            }
             break;
         }
         pthread_mutex_unlock(&api_call_mutex);
-        sleep(1); // 等待1秒后重试
+        
+        // 使用随机等待时间，避免多个线程同时重试
+        int wait_time = 1 + (rand() % 2); // 1-2秒的随机等待
+        sleep(wait_time);
     }
 }
 
@@ -267,20 +277,50 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                     
                     // 检查是否是并发限制错误
                     if (error_code && strstr(error_code, "1302") != NULL) {
-                        printf("检测到并发限制错误，将等待更长时间后重试\n");
-                        sleep(ZHIPU_RATE_LIMIT_DELAY); // 使用配置的延迟时间
+                        printf("检测到并发限制错误，将采用智能等待策略\n");
+                        
+                        // 根据当前并发请求数计算等待时间
+                        int concurrent_load = active_api_calls;
+                        int wait_time = ZHIPU_RATE_LIMIT_DELAY * (1 + concurrent_load / 2);
+                        
+                        // 添加随机性，避免多个线程同时重试
+                        wait_time += rand() % (wait_time / 2 + 1);
+                        
+                        // 限制最大等待时间
+                        if (wait_time > 10) wait_time = 10;
+                        
+                        printf("当前并发数: %d, 将等待%d秒后重试\n", concurrent_load, wait_time);
+                        sleep(wait_time);
                     } else if (error_code && strstr(error_code, "1305") != NULL) {
-                        printf("检测到API请求过多错误，将等待更长时间后重试\n");
-                        // 使用优化的指数退避策略，第一次等待15秒，后续每次增加50%
+                        printf("检测到API请求过多错误，将采用智能退避策略\n");
+                        // 使用更智能的退避策略，考虑当前并发请求数和重试次数
                         static int retry_count_1305 = 0;
-                        int wait_time = ZHIPU_RATE_LIMIT_DELAY * 3;
-                        for (int i = 0; i < retry_count_1305; i++) {
-                            wait_time = wait_time * 3 / 2; // 每次增加50%
+                        
+                        // 基础等待时间，基于配置的延迟时间
+                        int base_wait = ZHIPU_RATE_LIMIT_DELAY * 5;
+                        
+                        // 根据重试次数增加等待时间，但增加幅度逐渐减小
+                        int retry_factor = 1;
+                        for (int i = 0; i < retry_count_1305 && i < 5; i++) {
+                            retry_factor += (5 - i) / 2; // 递减的增加幅度
                         }
-                        printf("将等待%d秒后重试 (重试次数: %d)\n", wait_time, retry_count_1305);
+                        
+                        // 考虑当前并发请求数
+                        int concurrent_factor = (MAX_ZHIPU_CONCURRENT_CALLS - active_api_calls + 1);
+                        
+                        // 计算最终等待时间，并添加随机性
+                        int wait_time = base_wait * retry_factor / concurrent_factor;
+                        wait_time += rand() % (wait_time / 4 + 1); // 添加最多25%的随机性
+                        
+                        // 限制最大等待时间
+                        if (wait_time > 60) wait_time = 60;
+                        if (wait_time < 5) wait_time = 5;
+                        
+                        printf("将等待%d秒后重试 (重试次数: %d, 当前并发: %d)\n", 
+                               wait_time, retry_count_1305, active_api_calls);
                         sleep(wait_time);
                         retry_count_1305++;
-                        if (retry_count_1305 > 3) retry_count_1305 = 3; // 限制最大等待时间
+                        if (retry_count_1305 > 5) retry_count_1305 = 5; // 增加重试次数上限
                     } else if (error_code && strstr(error_code, "1210") != NULL) {
                         printf("检测到API参数错误，请检查请求格式\n");
                         // 输出请求内容以便调试

@@ -40,10 +40,10 @@ Similarly 1700 is for the example request in the seed enrichment
 #define MAX_ENRICHMENT_CORPUS_SIZE 10
 
 // Maximum concurrent API calls to Zhipu AI
-#define MAX_ZHIPU_CONCURRENT_CALLS 1
+#define MAX_ZHIPU_CONCURRENT_CALLS 3
 
 // Delay between API calls when rate limited (in seconds)
-#define ZHIPU_RATE_LIMIT_DELAY 5
+#define ZHIPU_RATE_LIMIT_DELAY 2
 
 #define PCRE2_CODE_UNIT_WIDTH 8 // Characters are 8 bits
 #include <pcre2.h>
