@@ -40,7 +40,7 @@ Similarly 1700 is for the example request in the seed enrichment
 #define MAX_ENRICHMENT_CORPUS_SIZE 10
 
 // Maximum concurrent API calls to Zhipu AI
-#define MAX_ZHIPU_CONCURRENT_CALLS 3
+#define MAX_ZHIPU_CONCURRENT_CALLS 2
 
 // Delay between API calls when rate limited (in seconds)
 #define ZHIPU_RATE_LIMIT_DELAY 2
