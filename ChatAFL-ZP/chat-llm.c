@@ -33,6 +33,9 @@ static void wait_for_api_call_slot() {
         if (active_api_calls < MAX_ZHIPU_CONCURRENT_CALLS) {
             active_api_calls++;
             pthread_mutex_unlock(&api_call_mutex);
+            // 即使没有达到并发限制，也添加一个小的随机延迟，避免所有请求同时发出
+            int random_delay = 1 + (rand() % 3); // 1-3秒的随机延迟
+            sleep(random_delay);
             break;
         }
         pthread_mutex_unlock(&api_call_mutex);
@@ -268,7 +271,13 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                         sleep(ZHIPU_RATE_LIMIT_DELAY); // 使用配置的延迟时间
                     } else if (error_code && strstr(error_code, "1305") != NULL) {
                         printf("检测到API请求过多错误，将等待更长时间后重试\n");
-                        sleep(ZHIPU_RATE_LIMIT_DELAY * 3); // 等待3倍于常规延迟的时间
+                        // 使用指数退避策略，第一次等待30秒，后续每次翻倍
+                        static int retry_count_1305 = 0;
+                        int wait_time = ZHIPU_RATE_LIMIT_DELAY * 3 * (1 << retry_count_1305);
+                        printf("将等待%d秒后重试 (重试次数: %d)\n", wait_time, retry_count_1305);
+                        sleep(wait_time);
+                        retry_count_1305++;
+                        if (retry_count_1305 > 3) retry_count_1305 = 3; // 限制最大等待时间
                     } else if (error_code && strstr(error_code, "1210") != NULL) {
                         printf("检测到API参数错误，请检查请求格式\n");
                         // 输出请求内容以便调试
