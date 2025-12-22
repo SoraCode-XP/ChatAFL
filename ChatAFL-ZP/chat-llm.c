@@ -1364,9 +1364,12 @@ json_object* build_zhipu_request_json(const char* model, const char* prompt, int
     printf("添加max_tokens字段: %d\n", max_tokens);
     json_object_object_add(request_obj, "max_tokens", json_object_new_int(max_tokens));
 
-    // 添加temperature字段
-    printf("添加temperature字段: %.2f\n", temperature);
-    json_object_object_add(request_obj, "temperature", json_object_new_double(temperature));
+    // 添加temperature字段，确保值在0.0到1.0之间
+    float safe_temperature = temperature;
+    if (safe_temperature > 1.0) safe_temperature = 1.0;
+    if (safe_temperature < 0.0) safe_temperature = 0.0;
+    printf("添加temperature字段: %.2f (原始值: %.2f)\n", safe_temperature, temperature);
+    json_object_object_add(request_obj, "temperature", json_object_new_double(safe_temperature));
     
     // 添加stream字段，设置为false，确保不是流式响应
     printf("添加stream字段: false\n");
