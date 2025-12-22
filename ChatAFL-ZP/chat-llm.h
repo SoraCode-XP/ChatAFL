@@ -43,7 +43,7 @@ Similarly 1700 is for the example request in the seed enrichment
 #define MAX_ZHIPU_CONCURRENT_CALLS 2
 
 // Delay between API calls when rate limited (in seconds)
-#define ZHIPU_RATE_LIMIT_DELAY 5
+#define ZHIPU_RATE_LIMIT_DELAY 10
 
 #define PCRE2_CODE_UNIT_WIDTH 8 // Characters are 8 bits
 #include <pcre2.h>

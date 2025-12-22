@@ -266,6 +266,9 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                     if (error_code && strstr(error_code, "1302") != NULL) {
                         printf("检测到并发限制错误，将等待更长时间后重试\n");
                         sleep(ZHIPU_RATE_LIMIT_DELAY); // 使用配置的延迟时间
+                    } else if (error_code && strstr(error_code, "1305") != NULL) {
+                        printf("检测到API请求过多错误，将等待更长时间后重试\n");
+                        sleep(ZHIPU_RATE_LIMIT_DELAY * 3); // 等待3倍于常规延迟的时间
                     } else if (error_code && strstr(error_code, "1210") != NULL) {
                         printf("检测到API参数错误，请检查请求格式\n");
                         // 输出请求内容以便调试
