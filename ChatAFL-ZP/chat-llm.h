@@ -31,7 +31,7 @@ Similarly 1700 is for the example request in the seed enrichment
 #define MESSAGE_TYPE_RETRIES 5
 
 //Maximum amount of tries for an enrichment
-#define ENRICHMENT_RETRIES 5
+#define ENRICHMENT_RETRIES 10
 
 // Maximum number of messages to be added
 #define MAX_ENRICHMENT_MESSAGE_TYPES 2
@@ -43,7 +43,7 @@ Similarly 1700 is for the example request in the seed enrichment
 #define MAX_ZHIPU_CONCURRENT_CALLS 1
 
 // Delay between API calls when rate limited (in seconds)
-#define ZHIPU_RATE_LIMIT_DELAY 15
+#define ZHIPU_RATE_LIMIT_DELAY 5
 
 #define PCRE2_CODE_UNIT_WIDTH 8 // Characters are 8 bits
 #include <pcre2.h>

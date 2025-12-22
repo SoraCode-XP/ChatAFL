@@ -34,8 +34,8 @@ static void wait_for_api_call_slot() {
             active_api_calls++;
             pthread_mutex_unlock(&api_call_mutex);
             // 即使没有达到并发限制，也添加一个小的随机延迟，避免所有请求同时发出
-            int random_delay = 1 + (rand() % 3); // 1-3秒的随机延迟
-            sleep(random_delay);
+            int random_delay = rand() % 2; // 0-1秒的随机延迟
+            if (random_delay > 0) sleep(random_delay);
             break;
         }
         pthread_mutex_unlock(&api_call_mutex);
@@ -271,9 +271,12 @@ char *chat_with_llm(char *prompt, char *model, int tries, float temperature)
                         sleep(ZHIPU_RATE_LIMIT_DELAY); // 使用配置的延迟时间
                     } else if (error_code && strstr(error_code, "1305") != NULL) {
                         printf("检测到API请求过多错误，将等待更长时间后重试\n");
-                        // 使用指数退避策略，第一次等待30秒，后续每次翻倍
+                        // 使用优化的指数退避策略，第一次等待15秒，后续每次增加50%
                         static int retry_count_1305 = 0;
-                        int wait_time = ZHIPU_RATE_LIMIT_DELAY * 3 * (1 << retry_count_1305);
+                        int wait_time = ZHIPU_RATE_LIMIT_DELAY * 3;
+                        for (int i = 0; i < retry_count_1305; i++) {
+                            wait_time = wait_time * 3 / 2; // 每次增加50%
+                        }
                         printf("将等待%d秒后重试 (重试次数: %d)\n", wait_time, retry_count_1305);
                         sleep(wait_time);
                         retry_count_1305++;
